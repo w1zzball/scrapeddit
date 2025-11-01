@@ -17,13 +17,11 @@ reddit = praw.Reddit(
     username=USERNAME,
 )
 
-# print(reddit.read_only)
+def post_on_subreddit(subreddit:str, title:str, text:str):
+    try:
+        reddit.subreddit(subreddit).submit(title, selftext=text)
+        print(f"Successfully posted to {subreddit}")
+    except Exception as e:
+        print(e.__str__())
 
-
-# for submission in reddit.subreddit("test").hot(limit=1):
-#     print(dir(submission))
-
-subreddit = reddit.subreddit("test")
-title = "Test"
-selftext = "Test Content"
-subreddit.submit(title, selftext)
+post_on_subreddit("asdajfkje333jjj","test","test")
