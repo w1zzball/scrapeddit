@@ -16,3 +16,14 @@ reddit = praw.Reddit(
     user_agent="Comment Extraction (by u/USERNAME)",
     username=USERNAME,
 )
+
+# print(reddit.read_only)
+
+
+# for submission in reddit.subreddit("test").hot(limit=1):
+#     print(dir(submission))
+
+subreddit = reddit.subreddit("test")
+title = "Test"
+selftext = "Test Content"
+subreddit.submit(title, selftext)
