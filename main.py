@@ -1,7 +1,16 @@
 import requests
 import requests.auth
-client_auth = requests.auth.HTTPBasicAuth('p-jcoLKBynTLew', 'gko_LXELoV07ZBNUXrvWZfzE3aI')
-post_data = {"grant_type": "password", "username": "reddit_bot", "password": "snoo"}
-headers = {"User-Agent": "ChangeMeClient/0.1 by YourUsername"}
+from dotenv import load_dotenv, find_dotenv
+import os
+load_dotenv(find_dotenv())
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
+CLIENT_ID = os.getenv("CLIENT_ID")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+client_auth = requests.auth.HTTPBasicAuth(CLIENT_ID,SECRET_KEY)
+post_data = {"grant_type": "password", "username": USERNAME, "password": PASSWORD}
+headers = {"User-Agent": "bubblebotz/0.1 by bubblebotz"}
 response = requests.post("https://www.reddit.com/api/v1/access_token", auth=client_auth, data=post_data, headers=headers)
-response.json()
+print(response.json())
