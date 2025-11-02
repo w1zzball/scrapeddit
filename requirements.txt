@@ -1,3 +1,4 @@
+asteval==1.0.6
 certifi==2025.10.5
 charset-normalizer==3.4.4
 dotenv==0.9.9
