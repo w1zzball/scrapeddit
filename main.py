@@ -40,41 +40,17 @@ def delete_read_mentions():
 def reply_to_unread_mentions(callback=lambda _ : "test"):
     unread = get_mentions(True)
     for mention in unread: 
-        print(f"{mention.author}\n{mention.body}\n")
+        # print(f"{mention.author}\n{mention.body}")
         reply = mention.reply(callback(mention))
         if(reply is None):
             raise Exception("could not reply")
         mention.mark_read()
 
-def safe_evaluate(code_str):
+def safe_evaluate_comment(comment):
     str_buf = io.StringIO()
     aeval = Interpreter(writer=str_buf)
-    aeval(code_str)
+    aeval(comment.body)
     return str_buf.getvalue()
 
-
 # reply_to_unread_mentions(lambda c: f"you said '{c.body}'")
-# reply_to_unread_mentions(str(eval(c.body)))
-
-# str_buf = io.StringIO()
-# aeval = Interpreter(writer=str_buf)
-# test = """#adasdas
-# print(1)"""
-# aeval(test)
-# body='''
-# #u/bubblebotz
-# for i in range(10):
-#     print(i, sqrt(i), log(1+1))
-# '''
-# body2='''
-# def f(x):
-#     print(x**x)
-# f(2)
-# '''
-# aeval(body2)
-m = get_mentions(True)
-for n in m:
-    print(n.body)
-    print(safe_evaluate(n.body))
-# aeval_out = str_buf.getvalue()
-# print(type(aeval_out))
+reply_to_unread_mentions(safe_evaluate_comment)
