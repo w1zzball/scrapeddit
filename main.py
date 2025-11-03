@@ -72,11 +72,42 @@ class Bot:
         aeval(comment.body)
         return str_buf.getvalue()
 
+    def get_top_level_comments_in_thread(
+        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+    ):
+        if post_id:
+            top_level_comments = self.reddit.submission(post_id).comments
+        elif post_url:
+            top_level_comments = self.reddit.submission(post_url).comments
+        else:
+            raise Exception("provide either a post_id or post_url")
+        top_level_comments.replace_more(limit=limit, threshold=threshold)
+        for top_level_comment in top_level_comments:
+            print(top_level_comment.body)
+
+    def get_comments_in_thread(
+        self,
+        post_id=None,
+        post_url=None,
+        limit: int | None = 0,
+        threshold=0,
+    ):
+        if post_id:
+            comments = self.reddit.submission(post_id).comments
+        elif post_url:
+            comments = self.reddit.submission(post_url).comments
+        else:
+            raise Exception("provide either a post_id or post_url")
+        comments.replace_more(limit=limit, threshold=threshold)
+        for comment in comments.list():
+            print(comment.body)
+
 
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
 
 # bot.reply_to_unread_mentions(lambda c: f"you said '{c.body}'")
 # bot.reply_to_unread_mentions(safe_evaluate_comment)
-for m in bot.reddit.inbox.all():
-    print(m)
+# for m in bot.reddit.inbox.all():
+#     print(m)
+bot.get_comments_in_thread("3g1jfi", limit=None)
