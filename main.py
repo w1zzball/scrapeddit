@@ -1,4 +1,5 @@
 import praw
+import psycopg
 from dotenv import load_dotenv, find_dotenv
 import os
 
@@ -19,6 +20,7 @@ def load_auth_data_from_env() -> dict[str, str | None]:
         # REDIRECT_URI = os.getenv("REDIRECT_URI")
         "client_secret": os.getenv("SECRET_KEY"),
         "user_agent": os.getenv("USER_AGENT"),
+        "db_string": os.getenv("DB_STRING"),
     }
 
 
