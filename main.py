@@ -4,6 +4,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 from datetime import datetime, timezone
 from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
 import argparse
 from prompt_toolkit.completion import NestedCompleter
 from rich.console import Console
@@ -338,7 +339,28 @@ def main():
             "quit": None,
         }
     )
-    session = PromptSession(completer=completer)
+    # create/load persistent prompt history in the project directory
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    history_file = os.path.join(project_dir, ".scrapeddit_history")
+    # ensure the file exists (try project dir first, then fall back to home, then CWD)
+    try:
+        open(history_file, "a", encoding="utf-8").close()
+    except OSError:
+        try:
+            history_file = os.path.expanduser("~/.scrapeddit_history")
+            open(history_file, "a", encoding="utf-8").close()
+            console.print(
+                "Note: project dir not writable; using home directory for history."
+            )
+        except OSError:
+            history_file = ".scrapeddit_history"
+            open(history_file, "a", encoding="utf-8").close()
+            console.print(
+                "Warning: could not create history in project or home; using CWD file."
+            )
+
+    history = FileHistory(history_file)
+    session = PromptSession(history=history, completer=completer)
     while True:
         try:
             user_input = session.prompt("scrapeddit> ").strip()
