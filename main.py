@@ -5,6 +5,8 @@ import os
 from datetime import datetime, timezone
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.application import get_app
+from prompt_toolkit.formatted_text import HTML
 import argparse
 from prompt_toolkit.completion import NestedCompleter
 from rich.console import Console
@@ -119,11 +121,16 @@ class Bot:
         if overwrite:
             conflict_clause = (
                 "ON CONFLICT (name) DO UPDATE SET "
-                "author=EXCLUDED.author, title=EXCLUDED.title, "
-                "selftext=EXCLUDED.selftext, url=EXCLUDED.url, "
-                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
-                "ups=EXCLUDED.ups, subreddit=EXCLUDED.subreddit, "
-                "permalink=EXCLUDED.permalink RETURNING name;"
+                "author=EXCLUDED.author, "
+                "title=EXCLUDED.title, "
+                "selftext=EXCLUDED.selftext, "
+                "url=EXCLUDED.url, "
+                "created_utc=EXCLUDED.created_utc, "
+                "edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, "
+                "subreddit=EXCLUDED.subreddit, "
+                "permalink=EXCLUDED.permalink "
+                "RETURNING name;"
             )
         else:
             conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
@@ -401,9 +408,60 @@ def main():
 
     history = FileHistory(history_file)
     session = PromptSession(history=history, completer=completer)
+
+    def bottom_toolbar() -> HTML:
+        """Return a small, fast context-sensitive help string for the
+        bottom toolbar based on the current buffer contents.
+        """
+        buf = get_app().current_buffer
+        txt = buf.document.text or ""
+        try:
+            tokens = shlex.split(txt)
+        except ValueError:
+            tokens = txt.split()
+
+        if not tokens:
+            return HTML("Commands: <b>scrape</b>, <b>db</b>, <b>exit</b>")
+
+        cmd = tokens[0].lower()
+        if cmd == "scrape":
+            if len(tokens) == 1:
+                return HTML(
+                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>  "
+                    "[--overwrite|-o] [--limit N] [--threshold N]"
+                )
+            target = tokens[1].lower()
+            if target in ("thread", "t", "entire", "entire_thread"):
+                return HTML(
+                    "<b>thread</b>: scrape submission + comments. "
+                    "Flags: <b>--overwrite/-o</b>, "
+                    "<b>--limit N</b> (None=all), <b>--threshold N</b>"
+                )
+            if target in ("submission", "post", "s"):
+                return HTML(
+                    "<b>submission</b>: scrape only submission. "
+                    "Flags: <b>--overwrite/-o</b>"
+                )
+            if target in ("comment", "c"):
+                return HTML(
+                    "<b>comment</b>: scrape a single comment. "
+                    "Flags: <b>--overwrite/-o</b>"
+                )
+            return HTML(
+                "Unknown scrape target. Use <b>thread</b>, "
+                "<b>submission</b>, or <b>comment</b>"
+            )
+
+        if cmd == "db":
+            return HTML("<b>db &lt;SQL&gt;</b>: run SQL against the configured DB")
+
+        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b>, or <b>exit</b>")
+
     while True:
         try:
-            user_input = session.prompt("scrapeddit> ").strip()
+            user_input = session.prompt(
+                "scrapeddit> ", bottom_toolbar=bottom_toolbar
+            ).strip()
             if not user_input:
                 continue
             # Support commands:
