@@ -61,9 +61,13 @@ class Bot:
             db_version = cur.fetchone()
             print(f"Connected to database, version: {db_version[0]}")
 
+    # TODO implement scrape submision (OP)
+    # TODO create submission table
+
     def scrape_thread_comments(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
     ):
+        # TODO add overwrite flag
         comments = bot.get_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
@@ -80,6 +84,22 @@ class Bot:
                     list(formatted_comment.values()),
                 )
         print(f"Inserted {len(comments)} comments from thread {post_id} into database.")
+
+    def scrape_submission(self, post_id=None, post_url=None):
+        # TODO add overwrite flag
+        submission = self.get_submission(post_id, post_url)  # TODO Progress bar
+        formatted_submission = self.format_submission(submission)
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            cur.execute(
+                """
+                INSERT INTO submissions
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (name) DO NOTHING;
+                """,
+                list(formatted_submission.values()),
+            )
+        print(f"Inserted submission with id: {post_id} into database.")
 
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
@@ -104,6 +124,15 @@ class Bot:
         for top_level_comment in top_level_comments:
             print(top_level_comment.body)
 
+    def get_submission(self, post_id=None, post_url=None):
+        if post_id:
+            submission = self.reddit.submission(post_id)
+        elif post_url:
+            submission = self.reddit.submission(post_url)
+        else:
+            raise Exception("provide either a post_id or post_url")
+        return submission
+
     def get_comments_in_thread(
         self,
         post_id=None,
@@ -112,12 +141,8 @@ class Bot:
         threshold=0,
     ) -> list[praw.models.Comment | praw.models.MoreComments]:
         """Get all comments in a thread, returns a CommentForest object."""
-        if post_id:
-            comments = self.reddit.submission(post_id).comments
-        elif post_url:
-            comments = self.reddit.submission(post_url).comments
-        else:
-            raise Exception("provide either a post_id or post_url")
+        submission = self.get_submission(post_id, post_url)
+        comments = submission.comments
         comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
         # for comment in comments.list():
@@ -143,6 +168,25 @@ class Bot:
         }
         return formatted_comment
 
+    def format_submission(
+        self, submission: praw.models.Submission
+    ) -> dict[str, str | int | float | bool]:
+        formatted_submission = {
+            "name": getattr(submission, "name", None),
+            "author": format(getattr(submission, "author", None)),
+            "title": getattr(submission, "title", None),
+            "selftext": getattr(submission, "selftext", None),
+            "url": getattr(submission, "url", None),
+            "created_utc": datetime.fromtimestamp(
+                getattr(submission, "created_utc", 0), tz=timezone.utc
+            ),
+            "edited": getattr(submission, "edited", None),
+            "ups": getattr(submission, "ups", None),
+            "subreddit": format(getattr(submission, "subreddit", None)),
+            "permalink": format(getattr(submission, "permalink", None)),
+        }
+        return formatted_submission
+
 
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
@@ -152,4 +196,7 @@ bot = Bot(**auth_data)
 # thread with deleted comments
 # TODO factor into bot class
 # comments = bot.get_comments_in_thread("1om49zc", limit=None)
-bot.scrape_thread_comments("1oohc4a")
+# subm = bot.reddit.submission("1oohc4a")
+# print(bot.format_submission(subm))
+# bot.scrape_thread_comments("1oohc4a")
+bot.scrape_submission("1oohc4a")
