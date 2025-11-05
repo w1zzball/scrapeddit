@@ -303,9 +303,19 @@ class Bot:
 
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
-            cur.execute(sql_str)
-            print(cur.fetchall())
+            try:
+                cur.execute("SET search_path TO reddit;")
+                cur.execute(sql_str)
+                # If the statement returned rows, fetch and print them. Otherwise
+                # print how many rows were affected.
+                if cur.description is not None:
+                    rows = cur.fetchall()
+                    console.print(rows)
+                else:
+                    console.print(f"Query OK, {cur.rowcount} rows affected.")
+            except Exception as e:
+                # Print a concise psycopg error message instead of full traceback.
+                console.print(f"{e.__class__.__module__}.{e.__class__.__name__}: {e}")
 
 
 def main():
