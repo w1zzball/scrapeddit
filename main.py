@@ -4,6 +4,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 from datetime import datetime, timezone
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import NestedCompleter
 
 
 def load_auth_data_from_env() -> dict[str, str | None]:
@@ -164,7 +165,8 @@ class Bot:
         comments = self.get_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
-        formatted_comments = map(self.format_comment, comments)  # TODO Progress bar
+        formatted_comments = map(self.format_comment, comments)
+        # TODO Progress bar
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             for formatted_comment in formatted_comments:
@@ -190,29 +192,71 @@ class Bot:
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             cur.execute(sql_str)
-            print(cur.fetchone())
+            print(cur.fetchall())
 
 
 def main():
     auth_data = load_auth_data_from_env()
     bot = Bot(**auth_data)
-    session = PromptSession()
+    # Autocompletion for top-level commands and scrape targets.
+    completer = NestedCompleter.from_nested_dict(
+        {
+            "scrape": {
+                "thread": None,
+                "submission": None,
+                "comment": None,
+                # short aliases
+                "t": None,
+                "s": None,
+                "c": None,
+            },
+            "db": None,
+            "exit": None,
+            "quit": None,
+        }
+    )
+    session = PromptSession(completer=completer)
     while True:
         try:
-            user_input = session.prompt("scrapeddit> ")
+            user_input = session.prompt("scrapeddit> ").strip()
+            if not user_input:
+                continue
+            # Support commands:
+            #   scrape thread <id|url>
+            #   scrape submission <id|url>
+            #   scrape comment <comment_id>
             if user_input.startswith("scrape "):
-                _, post_id_or_url = user_input.split(" ", 1)
-                if post_id_or_url.startswith("http"):
-                    bot.scrape_entire_thread(post_url=post_id_or_url)
+                parts = user_input.split(" ", 2)
+                if len(parts) < 3:
+                    print("Usage: scrape <target> <id_or_url>")
+                    print("Targets: thread | submission | comment")
+                    continue
+                _, target, arg = parts
+                target = target.lower()
+                # thread synonyms
+                if target in ("thread", "t", "entire", "entire_thread"):
+                    if arg.startswith("http"):
+                        bot.scrape_entire_thread(post_url=arg)
+                    else:
+                        bot.scrape_entire_thread(post_id=arg)
+                # submission synonyms
+                elif target in ("submission", "post", "s"):
+                    if arg.startswith("http"):
+                        bot.scrape_submission(post_url=arg)
+                    else:
+                        bot.scrape_submission(post_id=arg)
+                # comment
+                elif target in ("comment", "c"):
+                    bot.scrape_comment(arg)
                 else:
-                    bot.scrape_entire_thread(post_id=post_id_or_url)
+                    print("Unknown target; use thread, submission or comment.")
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 bot.db_execute(sql_str)
             elif user_input in {"exit", "quit"}:
                 break
             else:
-                print("Unknown command.")
+                print("Unknown command. Try 'scrape', 'db', or 'exit'.")
         except KeyboardInterrupt:
             break
         except EOFError:
