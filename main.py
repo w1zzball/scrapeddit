@@ -357,11 +357,15 @@ class Bot:
         elif sorter == "top":
             iterator = sub.top() if limit is None else sub.top(limit=limit)
         elif sorter == "rising":
-            iterator = sub.rising() if limit is None else sub.rising(limit=limit)
+            if limit is None:
+                iterator = sub.rising()
+            else:
+                iterator = sub.rising(limit=limit)
         elif sorter == "controversial":
-            iterator = (
-                sub.controversial() if limit is None else sub.controversial(limit=limit)
-            )
+            if limit is None:
+                iterator = sub.controversial()
+            else:
+                iterator = sub.controversial(limit=limit)
         else:
             iterator = sub.new() if limit is None else sub.new(limit=limit)
 
@@ -392,7 +396,9 @@ class Bot:
                                 overwrite=overwrite,
                             )
                         except Exception as e:
-                            console.print("Error scraping submission " f"{sname}: {e}")
+                            console.print("Error scraping submission:")
+                            console.print(sname)
+                            console.print(str(e))
                             continue
                     else:
                         try:
@@ -401,7 +407,9 @@ class Bot:
                                 overwrite=overwrite,
                             )
                         except Exception as e:
-                            console.print("Error scraping thread " f"{sname}: {e}")
+                            console.print("Error scraping thread:")
+                            console.print(sname)
+                            console.print(str(e))
                             continue
                     scraped += 1
 
@@ -468,9 +476,7 @@ def main():
         try:
             history_file = os.path.expanduser("~/.scrapeddit_history")
             open(history_file, "a", encoding="utf-8").close()
-            console.print(
-                "Note: project dir not writable; using home directory " "for history."
-            )
+            console.print("Note: project dir not writable; using home dir for history.")
         except OSError:
             history_file = ".scrapeddit_history"
             open(history_file, "a", encoding="utf-8").close()
@@ -527,7 +533,10 @@ def main():
             elif target in ("comment", "c"):
                 s = "comment: scrape a single comment. Flags: --overwrite/-o"
             else:
-                s = "Unknown scrape target. Use thread, submission, comment, or subreddit"
+                s = (
+                    "Unknown scrape target. Use thread, submission, "
+                    "comment, or subreddit"
+                )
 
             try:
                 cols = get_app().output.get_size().columns
@@ -537,9 +546,9 @@ def main():
             return HTML("<br/>".join(wrapped))
 
         if cmd == "db":
-            return HTML("<b>db &lt;SQL&gt;</b>: run SQL against the configured DB")
+            return HTML("<b>db &lt;SQL&gt;</b>: run SQL against DB")
 
-        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b>, or <b>exit</b>")
+        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b> or <b>exit</b>")
 
     while True:
         try:
@@ -596,7 +605,7 @@ def main():
                             print(f"Invalid limit value: {ns.limit}")
                             limit = None
                 threshold = ns.threshold if ns.threshold is not None else 0
-                sort = ns.sort if getattr(ns, "sort", None) is not None else "new"
+                sort = ns.sort if ns.sort is not None else "new"
                 subs_only = bool(getattr(ns, "subs_only", False))
                 # thread synonyms
                 if target in ("thread", "t", "entire", "entire_thread"):
@@ -617,15 +626,21 @@ def main():
                 # submission synonyms
                 elif target in ("submission", "post", "s"):
                     if arg.startswith("http"):
-                        bot.scrape_submission(post_url=arg, overwrite=overwrite)
+                        bot.scrape_submission(
+                            post_url=arg,
+                            overwrite=overwrite,
+                        )
                     else:
-                        bot.scrape_submission(post_id=arg, overwrite=overwrite)
+                        bot.scrape_submission(
+                            post_id=arg,
+                            overwrite=overwrite,
+                        )
                 # comment
                 elif target in ("comment", "c"):
                     bot.scrape_comment(arg, overwrite=overwrite)
                 # subreddit (collection of submissions)
                 elif target in ("subreddit", "r"):
-                    # arg should be subreddit name (e.g. 'python' or 'r/python')
+                    # arg should be subreddit name, e.g. 'python' or 'r/python'
                     bot.scrape_subreddit(
                         arg,
                         sort=sort,
