@@ -14,6 +14,7 @@ from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 import shlex
 import shutil
 import textwrap
+from typing import Any
 
 
 console = Console()
@@ -67,13 +68,16 @@ class Bot:
         with self.conn.cursor() as cur:
             cur.execute("SELECT version();")
             db_version = cur.fetchone()
-            print(f"Connected to database, version: {db_version[0]}")
+            if db_version:
+                print(f"Connected to database, version: {db_version[0]}")
+            else:
+                print("Connected to database (version unknown)")
 
     def get_submission(
         self,
         post_id=None,
         post_url=None,
-    ) -> praw.models.Submission:
+    ) -> Any:
         if post_id:
             submission = self.reddit.submission(post_id)
         elif post_url:
@@ -82,9 +86,7 @@ class Bot:
             raise Exception("provide either a post_id or post_url")
         return submission
 
-    def format_submission(
-        self, submission: praw.models.Submission
-    ) -> dict[str, str | int | float | bool]:
+    def format_submission(self, submission: Any) -> dict[str, str | int | float | bool]:
         formatted_submission = {
             "name": getattr(submission, "name", None),
             "author": format(getattr(submission, "author", None)),
@@ -151,9 +153,7 @@ class Bot:
         else:
             console.print("No change to submission (conflict and skipped)")
 
-    def get_comment(
-        self, comment_id: str
-    ) -> praw.models.Comment | praw.models.MoreComments:
+    def get_comment(self, comment_id: str) -> Any:
         """
         Get a single comment by its ID.
         """
@@ -207,7 +207,7 @@ class Bot:
         post_url=None,
         limit: int | None = None,
         threshold=0,
-    ) -> list[praw.models.Comment | praw.models.MoreComments]:
+    ) -> list[Any]:
         """Get all comments in a thread, returns a CommentForest object."""
         submission = self.get_submission(post_id, post_url)
         comments = submission.comments
@@ -215,9 +215,7 @@ class Bot:
             comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
 
-    def format_comment(
-        self, comment: praw.models.Comment
-    ) -> dict[str, str | int | float | bool]:
+    def format_comment(self, comment: Any) -> dict[str, str | int | float | bool]:
         formatted_comment = {
             "name": getattr(comment, "name", None),
             "author": format(getattr(comment, "author", None)),
@@ -524,22 +522,26 @@ def main():
             tokens = txt.split()
 
         if not tokens:
-            return HTML("Commands: <b>scrape</b>, <b>db</b>, <b>exit</b>")
+            return HTML(
+                "Commands: <b>scrape</b>, <b>db</b>, <b>clear</b>, " "<b>exit</b>"
+            )
 
         cmd = tokens[0].lower()
+
         if cmd == "scrape":
+            # brief usage when only 'scrape' typed
             if len(tokens) == 1:
                 base = (
                     "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>"
                     " [--overwrite|-o] [--limit N] [--threshold N]"
                 )
-                # wrap to terminal width to avoid overflow
                 try:
                     cols = get_app().output.get_size().columns
                 except Exception:
                     cols = shutil.get_terminal_size().columns
                 parts = textwrap.wrap(base, width=max(20, cols - 10))
                 return HTML("<br/>".join(parts))
+
             target = tokens[1].lower()
             if target in ("thread", "t", "entire", "entire_thread"):
                 s = (
@@ -548,9 +550,10 @@ def main():
                 )
             elif target in ("subreddit", "r"):
                 s = (
-                    "subreddit: scrape subreddit "
-                    " Flags: --sort (new|hot|top|rising|controversial), "
-                    "--limit N, --subs-only, --overwrite/-o"
+                    "subreddit: scrape many submissions (defaults to "
+                    "threads). Flags: --sort (new|hot|top|rising|"
+                    "controversial), --limit N, --subs-only, "
+                    "--overwrite/-o"
                 )
             elif target in ("submission", "post", "s"):
                 s = "submission: scrape only submission. Flags: --overwrite/-o"
@@ -559,9 +562,22 @@ def main():
             else:
                 s = (
                     "Unknown scrape target. Use thread, submission, "
-                    "comment, or subreddit"
+                    "comment or subreddit"
                 )
 
+            try:
+                cols = get_app().output.get_size().columns
+            except Exception:
+                cols = shutil.get_terminal_size().columns
+            wrapped = textwrap.wrap(s, width=max(20, cols - 10))
+            return HTML("<br/>".join(wrapped))
+
+        if cmd == "clear":
+            s = (
+                "clear: remove rows from tables. Usage: clear "
+                "&lt;submissions|comments|all&gt;. "
+                "This prompts for confirmation."
+            )
             try:
                 cols = get_app().output.get_size().columns
             except Exception:
@@ -698,7 +714,9 @@ def main():
                     print("Aborted: confirmation not provided.")
                     continue
                 subs_del, comm_del = bot.clear_tables(target)
-                console.print(f"Cleared: submissions={subs_del}, comments={comm_del}")
+                console.print(
+                    f"Cleared: submissions={subs_del}, " f"comments={comm_del}"
+                )
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 bot.db_execute(sql_str)
