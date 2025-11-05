@@ -442,6 +442,25 @@ class Bot:
                 ename = f"{e.__class__.__module__}.{e.__class__.__name__}"
                 console.print(f"{ename}: {e}")
 
+    def clear_tables(self, target: str = "all") -> tuple[int, int]:
+        """Delete rows from comments and/or submissions.
+
+        target: 'comments', 'submissions', or 'all'. Returns a tuple of
+        deleted counts (submissions_deleted, comments_deleted).
+        This does NOT drop tables—only deletes rows.
+        """
+        submissions_deleted = 0
+        comments_deleted = 0
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            if target in ("comments", "all"):
+                cur.execute("DELETE FROM comments;")
+                comments_deleted = cur.rowcount
+            if target in ("submissions", "all"):
+                cur.execute("DELETE FROM submissions;")
+                submissions_deleted = cur.rowcount
+        return submissions_deleted, comments_deleted
+
 
 def main():
     auth_data = load_auth_data_from_env()
@@ -460,6 +479,11 @@ def main():
                 "c": None,
                 "r": None,
             },
+            "clear": {
+                "submissions": None,
+                "comments": None,
+                "all": None,
+            },
             "db": None,
             "exit": None,
             "quit": None,
@@ -476,7 +500,7 @@ def main():
         try:
             history_file = os.path.expanduser("~/.scrapeddit_history")
             open(history_file, "a", encoding="utf-8").close()
-            console.print("Note: project dir not writable; using home dir for history.")
+            console.print("Note: project dir not writable; using home dir")
         except OSError:
             history_file = ".scrapeddit_history"
             open(history_file, "a", encoding="utf-8").close()
@@ -548,7 +572,7 @@ def main():
         if cmd == "db":
             return HTML("<b>db &lt;SQL&gt;</b>: run SQL against DB")
 
-        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b> or <b>exit</b>")
+        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b> or " "<b>exit</b>")
 
     while True:
         try:
@@ -607,6 +631,7 @@ def main():
                 threshold = ns.threshold if ns.threshold is not None else 0
                 sort = ns.sort if ns.sort is not None else "new"
                 subs_only = bool(getattr(ns, "subs_only", False))
+                # support clear command: handled below
                 # thread synonyms
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
@@ -650,6 +675,30 @@ def main():
                     )
                 else:
                     print("Unknown target; use thread, submission or comment.")
+            # clear command
+            elif user_input.startswith("clear ") or user_input == "clear":
+                tokens = shlex.split(user_input)
+                if len(tokens) < 2:
+                    print("Usage: clear <submissions|comments|all>")
+                    continue
+                target = tokens[1].lower()
+                if target in ("subs", "submission", "submissions"):
+                    target = "submissions"
+                elif target in ("c", "comment", "comments"):
+                    target = "comments"
+                elif target == "all":
+                    target = "all"
+                else:
+                    print("Unknown clear target. Use submissions, " "comments or all.")
+                    continue
+                confirm = session.prompt(
+                    "Type 'Yes' to confirm deletion (THIS CANNOT BE UNDONE): "
+                ).strip()
+                if confirm != "Yes":
+                    print("Aborted: confirmation not provided.")
+                    continue
+                subs_del, comm_del = bot.clear_tables(target)
+                console.print(f"Cleared: submissions={subs_del}, comments={comm_del}")
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 bot.db_execute(sql_str)
