@@ -36,7 +36,6 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 
 
 # TODO add logging
-# TODO skip scraped thread
 # TODO consider connection pooling with psycopg pool
 class Bot:
 
@@ -101,7 +100,7 @@ class Bot:
 
         If overwrite is True, existing rows will be updated on conflict.
         """
-        submission = self.get_submission(post_id, post_url)  # TODO Progress bar
+        submission = self.get_submission(post_id, post_url)
         formatted_submission = self.format_submission(submission)
         cols = "(name, author, title, selftext, url, created_utc, edited, ups, subreddit, permalink)"
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"
