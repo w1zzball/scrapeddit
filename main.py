@@ -26,7 +26,22 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 
 
 # TODO add logging
+# TODO skip scraped thread
+# TODO insert OP
+# TODO consider connection pooling with psycopg pool
 class Bot:
+    keys = [
+        "name",
+        "author",
+        "body",
+        "created_utc",
+        "edited",
+        "ups",
+        "parent_id",
+        "submission",
+        "subreddit_name_prefixed",
+    ]
+
     def __init__(
         self, *, username, password, client_id, client_secret, user_agent, db_string
     ) -> None:
@@ -38,16 +53,33 @@ class Bot:
             user_agent=user_agent,
         )
         # db connection
+        # TODO look into autocommit
         self.conn = psycopg.connect(db_string)
+        self.conn.autocommit = True
         with self.conn.cursor() as cur:
             cur.execute("SELECT version();")
             db_version = cur.fetchone()
             print(f"Connected to database, version: {db_version[0]}")
 
-    def scrape_thread(
+    def scrape_thread_comments(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
     ):
-        pass
+        comments = bot.get_comments_in_thread(
+            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+        )
+        formatted_comments = map(self.format_comment, comments)  # TODO Progress bar
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            for formatted_comment in formatted_comments:
+                cur.execute(
+                    """
+                INSERT INTO comments
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (name) DO NOTHING;
+                """,
+                    list(formatted_comment.values()),
+                )
+        print(f"Inserted {len(comments)} comments from thread {post_id} into database.")
 
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
@@ -91,6 +123,26 @@ class Bot:
         # for comment in comments.list():
         #     return comment.body
 
+    def format_comment(
+        self, comment: praw.models.Comment
+    ) -> dict[str, str | int | float | bool]:
+        formatted_comment = {
+            "name": getattr(comment, "name", None),
+            "author": format(getattr(comment, "author", None)),
+            "body": getattr(comment, "body", None),
+            "created_utc": datetime.fromtimestamp(
+                getattr(comment, "created_utc", 0), tz=timezone.utc
+            ),
+            "edited": getattr(comment, "edited", None),
+            "ups": getattr(comment, "ups", None),
+            "parent_id": getattr(comment, "parent_id", None),
+            "submission": format(getattr(comment, "submission", None)),
+            "subreddit_name_prefixed": getattr(
+                comment, "subreddit_name_prefixed", None
+            ),
+        }
+        return formatted_comment
+
 
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
@@ -98,60 +150,6 @@ bot = Bot(**auth_data)
 # comments = bot.get_comments_in_thread("1oohc4a", limit=None)
 
 # thread with deleted comments
-comments = bot.get_comments_in_thread("1om49zc", limit=None)
-
-keys = [
-    "name",
-    "author",
-    "body",
-    "created_utc",
-    "edited",
-    "ups",
-    "parent_id",
-    "submission",
-    "subreddit_name_prefixed",
-]
-
-
-def format_comment(comment: praw.models.Comment) -> dict[str, str | int | float | bool]:
-    formatted_comment = {
-        "name": getattr(comment, "name", None),
-        "author": format(getattr(comment, "author", None)),
-        "body": getattr(comment, "body", None),
-        "created_utc": datetime.fromtimestamp(
-            getattr(comment, "created_utc", 0), tz=timezone.utc
-        ),
-        "edited": getattr(comment, "edited", None),
-        "ups": getattr(comment, "ups", None),
-        "parent_id": getattr(comment, "parent_id", None),
-        "submission": format(getattr(comment, "submission", None)),
-        "subreddit_name_prefixed": getattr(comment, "subreddit_name_prefixed", None),
-    }
-    return formatted_comment
-
-
-# for k in keys:
-#     print(f"{k}: {getattr(comments[0], k, None)}")
-
-# bot.db_execute("SELECT * FROM comment;")
-
-# print(format_comment(comments[0]))
-
-formatted_comment = format_comment(comments[0])
-# print(formatted_comment.values())
-values = str(list(formatted_comment.values()))[1:-1]
-sql_str = f"INSERT INTO comments VALUES ({values}); "
-# print(sql_str)
-bot.db_execute("SELECT * FROM comments")
-# bot.db_execute(sql_str)
-cur = bot.conn.cursor()
-cur.execute("SET search_path TO reddit;")
-cur.execute(
-    """
-    INSERT INTO comments
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-    """,
-    list(formatted_comment.values()),
-)
-bot.conn.commit()
-cur.close()
+# TODO factor into bot class
+# comments = bot.get_comments_in_thread("1om49zc", limit=None)
+bot.scrape_thread_comments("1oohc4a")
