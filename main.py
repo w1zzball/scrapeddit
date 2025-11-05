@@ -93,21 +93,43 @@ class Bot:
         }
         return formatted_submission
 
-    def scrape_submission(self, post_id=None, post_url=None):
-        # TODO add overwrite flag
+    def scrape_submission(self, post_id=None, post_url=None, overwrite: bool = False):
+        """Fetch a submission and insert it into the DB.
+
+        If overwrite is True, existing rows will be updated on conflict.
+        """
         submission = self.get_submission(post_id, post_url)  # TODO Progress bar
         formatted_submission = self.format_submission(submission)
+        cols = "(name, author, title, selftext, url, created_utc, edited, ups, subreddit, permalink)"
+        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"
+        if overwrite:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, title=EXCLUDED.title, "
+                "selftext=EXCLUDED.selftext, url=EXCLUDED.url, "
+                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, subreddit=EXCLUDED.subreddit, "
+                "permalink=EXCLUDED.permalink RETURNING name;"
+            )
+        else:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
+
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             cur.execute(
-                """
-                INSERT INTO submissions
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (name) DO NOTHING;
+                f"""
+                INSERT INTO submissions {cols}
+                VALUES ({placeholders})
+                {conflict_clause}
                 """,
                 list(formatted_submission.values()),
             )
-        print(f"Inserted submission with id: {post_id} into database.")
+            # fetch result to determine if an insert/update happened
+            res = cur.fetchone()
+        if res:
+            console.print(f"Inserted/updated submission {res[0]}")
+        else:
+            console.print("No change to submission (conflict and skipped)")
 
     def get_comment(
         self, comment_id: str
@@ -116,21 +138,38 @@ class Bot:
         comment = self.reddit.comment(comment_id)
         return comment
 
-    def scrape_comment(self, comment_id: str):
-        # TODO add overwrite flag
+    def scrape_comment(self, comment_id: str, overwrite: bool = False):
+        """Fetch a single comment and insert into DB. If overwrite=True update on conflict."""
         comment = self.get_comment(comment_id)
         formatted_comment = self.format_comment(comment)
+        cols = "(name, author, body, created_utc, edited, ups, parent_id, submission_id, subreddit)"
+        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
+        if overwrite:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, body=EXCLUDED.body, "
+                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
+                "submission_id=EXCLUDED.submission_id, subreddit=EXCLUDED.subreddit RETURNING name;"
+            )
+        else:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
+
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             cur.execute(
-                """
-                INSERT INTO comments
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (name) DO NOTHING;
+                f"""
+                INSERT INTO comments {cols}
+                VALUES ({placeholders})
+                {conflict_clause}
                 """,
                 list(formatted_comment.values()),
             )
-        print(f"Inserted comment with id: {comment_id} into database.")
+            res = cur.fetchone()
+        if res:
+            console.print(f"Inserted/updated comment {res[0]}")
+        else:
+            console.print("No change to comment (conflict and skipped)")
 
     def get_comments_in_thread(
         self,
@@ -161,21 +200,46 @@ class Bot:
             "edited": bool(getattr(comment, "edited", None)),
             "ups": getattr(comment, "ups", None),
             "parent_id": getattr(comment, "parent_id", None),
-            "submission": format(getattr(comment, "submission", None)),
-            "subreddit_name_prefixed": getattr(
-                comment, "subreddit_name_prefixed", None
+            # store submission id (base36 or prefixed). prefer link_id if present
+            "submission_id": (
+                getattr(comment, "link_id", None)
+                or getattr(getattr(comment, "submission", None), "id", None)
+                or format(getattr(comment, "submission", None))
             ),
+            # DB uses 'subreddit' column; keep the prefixed form (e.g. 'r/python')
+            "subreddit": getattr(comment, "subreddit_name_prefixed", None),
         }
         return formatted_comment
 
     def scrape_comments_in_thread(
-        self, post_id=None, post_url=None, limit: int | None = None, threshold=0
+        self,
+        post_id=None,
+        post_url=None,
+        limit: int | None = None,
+        threshold=0,
+        overwrite: bool = False,
     ):
-        # TODO add overwrite flag
+        """Scrape all comments in a thread and insert into DB.
+
+        If overwrite=True, existing comments will be updated.
+        """
         comments = self.get_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
         total = len(comments)
+        cols = "(name, author, body, created_utc, edited, ups, parent_id, submission_id, subreddit)"
+        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
+        if overwrite:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, body=EXCLUDED.body, "
+                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
+                "submission_id=EXCLUDED.submission_id, subreddit=EXCLUDED.subreddit RETURNING name;"
+            )
+        else:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
+
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             # show a progress bar for per-comment inserts and count inserts vs skipped
@@ -191,11 +255,10 @@ class Bot:
                 for comment in comments:
                     formatted_comment = self.format_comment(comment)
                     cur.execute(
-                        """
-                INSERT INTO comments
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (name) DO NOTHING
-                RETURNING name;
+                        f"""
+                INSERT INTO comments {cols}
+                VALUES ({placeholders})
+                {conflict_clause}
                 """,
                         list(formatted_comment.values()),
                     )
@@ -205,12 +268,17 @@ class Bot:
                     else:
                         skipped += 1
                     progress.advance(task)
-        console.print(
-            f"Fetched {total} comments — inserted {inserted}, skipped {skipped} (duplicates)."
-        )
+        if overwrite:
+            console.print(
+                f"Fetched {total} comments — inserted/updated {inserted}, skipped {skipped}."
+            )
+        else:
+            console.print(
+                f"Fetched {total} comments — inserted {inserted}, skipped {skipped} (duplicates)."
+            )
 
     def scrape_entire_thread(
-        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+        self, post_id=None, post_url=None, limit: int | None = None, threshold=0
     ):
         # Show stage-level status messages while scraping submission and comments
         with console.status("Scraping submission...", spinner="dots"):
