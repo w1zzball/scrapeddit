@@ -172,4 +172,4 @@ class Bot:
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
 
-bot.scrape_entire_thread("1oj1wui")
+bot.scrape_entire_thread("1om1su5")
