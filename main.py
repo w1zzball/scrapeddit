@@ -101,6 +101,29 @@ class Bot:
             )
         print(f"Inserted submission with id: {post_id} into database.")
 
+    def get_comment(
+        self, comment_id: str
+    ) -> praw.models.Comment | praw.models.MoreComments:
+        """Get a single comment by its ID."""
+        comment = self.reddit.comment(comment_id)
+        return comment
+
+    def scrape_comment(self, comment_id: str):
+        # TODO add overwrite flag
+        comment = self.get_comment(comment_id)
+        formatted_comment = self.format_comment(comment)
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            cur.execute(
+                """
+                INSERT INTO comments
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (name) DO NOTHING;
+                """,
+                list(formatted_comment.values()),
+            )
+        print(f"Inserted comment with id: {comment_id} into database.")
+
     def get_comments_in_thread(
         self,
         post_id=None,
