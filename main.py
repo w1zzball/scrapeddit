@@ -65,7 +65,11 @@ class Bot:
             db_version = cur.fetchone()
             print(f"Connected to database, version: {db_version[0]}")
 
-    def get_submission(self, post_id=None, post_url=None) -> praw.models.Submission:
+    def get_submission(
+        self,
+        post_id=None,
+        post_url=None,
+    ) -> praw.models.Submission:
         if post_id:
             submission = self.reddit.submission(post_id)
         elif post_url:
@@ -95,14 +99,22 @@ class Bot:
         }
         return formatted_submission
 
-    def scrape_submission(self, post_id=None, post_url=None, overwrite: bool = False):
+    def scrape_submission(
+        self,
+        post_id=None,
+        post_url=None,
+        overwrite: bool = False,
+    ):
         """Fetch a submission and insert it into the DB.
 
         If overwrite is True, existing rows will be updated on conflict.
         """
         submission = self.get_submission(post_id, post_url)
         formatted_submission = self.format_submission(submission)
-        cols = "(name, author, title, selftext, url, created_utc, edited, ups, subreddit, permalink)"
+        cols = (
+            "(name, author, title, selftext, url, created_utc, "
+            "edited, ups, subreddit, permalink)"
+        )
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"
         if overwrite:
             conflict_clause = (
@@ -136,15 +148,24 @@ class Bot:
     def get_comment(
         self, comment_id: str
     ) -> praw.models.Comment | praw.models.MoreComments:
-        """Get a single comment by its ID."""
+        """
+        Get a single comment by its ID.
+        """
         comment = self.reddit.comment(comment_id)
         return comment
 
     def scrape_comment(self, comment_id: str, overwrite: bool = False):
-        """Fetch a single comment and insert into DB. If overwrite=True update on conflict."""
+        """
+        Fetch a single comment and insert into DB.
+
+        If overwrite=True update on conflict.
+        """
         comment = self.get_comment(comment_id)
         formatted_comment = self.format_comment(comment)
-        cols = "(name, author, body, created_utc, edited, ups, parent_id, submission_id, subreddit)"
+        cols = (
+            "(name, author, body, created_utc, edited, ups, "
+            "parent_id, submission_id, subreddit)"
+        )
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
         if overwrite:
             conflict_clause = (
@@ -152,7 +173,8 @@ class Bot:
                 "author=EXCLUDED.author, body=EXCLUDED.body, "
                 "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
                 "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
-                "submission_id=EXCLUDED.submission_id, subreddit=EXCLUDED.subreddit RETURNING name;"
+                "submission_id=EXCLUDED.submission_id, "
+                "subreddit=EXCLUDED.subreddit RETURNING name;"
             )
         else:
             conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
@@ -202,13 +224,16 @@ class Bot:
             "edited": bool(getattr(comment, "edited", None)),
             "ups": getattr(comment, "ups", None),
             "parent_id": getattr(comment, "parent_id", None),
-            # store submission id (base36 or prefixed). prefer link_id if present
+            # store submission id (base36 or prefixed). Prefer link_id
+            # when present; otherwise fall back to submission.id or
+            # a stringified submission object.
             "submission_id": (
                 getattr(comment, "link_id", None)
                 or getattr(getattr(comment, "submission", None), "id", None)
                 or format(getattr(comment, "submission", None))
             ),
-            # DB uses 'subreddit' column; keep the prefixed form (e.g. 'r/python')
+            # DB uses 'subreddit' column; keep the prefixed form
+            # (e.g. 'r/python').
             "subreddit": getattr(comment, "subreddit_name_prefixed", None),
         }
         return formatted_comment
@@ -226,10 +251,16 @@ class Bot:
         If overwrite=True, existing comments will be updated.
         """
         comments = self.get_comments_in_thread(
-            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+            post_id=post_id,
+            post_url=post_url,
+            limit=limit,
+            threshold=threshold,
         )
         total = len(comments)
-        cols = "(name, author, body, created_utc, edited, ups, parent_id, submission_id, subreddit)"
+        cols = (
+            "(name, author, body, created_utc, edited, ups, "
+            "parent_id, submission_id, subreddit)"
+        )
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
         if overwrite:
             conflict_clause = (
@@ -237,14 +268,16 @@ class Bot:
                 "author=EXCLUDED.author, body=EXCLUDED.body, "
                 "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
                 "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
-                "submission_id=EXCLUDED.submission_id, subreddit=EXCLUDED.subreddit RETURNING name;"
+                "submission_id=EXCLUDED.submission_id, "
+                "subreddit=EXCLUDED.subreddit RETURNING name;"
             )
         else:
             conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
 
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            # show a progress bar for per-comment inserts and count inserts vs skipped
+            # Show a progress bar for per-comment inserts and count
+            # inserts vs skipped.
             inserted = 0
             skipped = 0
             with Progress(
@@ -271,13 +304,16 @@ class Bot:
                         skipped += 1
                     progress.advance(task)
         if overwrite:
-            console.print(
-                f"Fetched {total} comments — inserted/updated {inserted}, skipped {skipped}."
+            msg = (
+                f"Fetched {total} comments — inserted/updated {inserted}, "
+                f"skipped {skipped}."
             )
         else:
-            console.print(
-                f"Fetched {total} comments — inserted {inserted}, skipped {skipped} (duplicates)."
+            msg = (
+                f"Fetched {total} comments — inserted {inserted}, "
+                f"skipped {skipped} (duplicates)."
             )
+        console.print(msg)
 
     def scrape_entire_thread(
         self,
@@ -287,7 +323,8 @@ class Bot:
         threshold=0,
         overwrite: bool = False,
     ):
-        # Show stage-level status messages while scraping submission and comments
+        # Show stage-level status messages while scraping submission
+        # and comments
         with console.status("Scraping submission...", spinner="dots"):
             self.scrape_submission(
                 post_id=post_id, post_url=post_url, overwrite=overwrite
@@ -306,16 +343,18 @@ class Bot:
             try:
                 cur.execute("SET search_path TO reddit;")
                 cur.execute(sql_str)
-                # If the statement returned rows, fetch and print them. Otherwise
-                # print how many rows were affected.
+                # If the statement returned rows, fetch and print them.
+                # Otherwise print how many rows were affected.
                 if cur.description is not None:
                     rows = cur.fetchall()
                     console.print(rows)
                 else:
                     console.print(f"Query OK, {cur.rowcount} rows affected.")
             except Exception as e:
-                # Print a concise psycopg error message instead of full traceback.
-                console.print(f"{e.__class__.__module__}.{e.__class__.__name__}: {e}")
+                # Print a concise psycopg error message instead of
+                # the full traceback.
+                ename = f"{e.__class__.__module__}.{e.__class__.__name__}"
+                console.print(f"{ename}: {e}")
 
 
 def main():
@@ -341,7 +380,8 @@ def main():
     # create/load persistent prompt history in the project directory
     project_dir = os.path.dirname(os.path.abspath(__file__))
     history_file = os.path.join(project_dir, ".scrapeddit_history")
-    # ensure the file exists (try project dir first, then fall back to home, then CWD)
+    # ensure the file exists (try project dir first, then fall back to
+    # home, then CWD)
     try:
         open(history_file, "a", encoding="utf-8").close()
     except OSError:
@@ -349,13 +389,14 @@ def main():
             history_file = os.path.expanduser("~/.scrapeddit_history")
             open(history_file, "a", encoding="utf-8").close()
             console.print(
-                "Note: project dir not writable; using home directory for history."
+                "Note: project dir not writable; using home directory " "for history."
             )
         except OSError:
             history_file = ".scrapeddit_history"
             open(history_file, "a", encoding="utf-8").close()
             console.print(
-                "Warning: could not create history in project or home; using CWD file."
+                "Warning: could not create history in project or home; "
+                "using CWD file."
             )
 
     history = FileHistory(history_file)
@@ -375,7 +416,8 @@ def main():
                 tokens = shlex.split(user_input)
                 if len(tokens) < 3:
                     print(
-                        "Usage: scrape <target> <id_or_url> [--overwrite] [--limit N] [--threshold N]"
+                        "Usage: scrape <target> <id_or_url> "
+                        "[--overwrite] [--limit N] [--threshold N]"
                     )
                     continue
                 _, target = tokens[0], tokens[1]
