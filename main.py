@@ -12,6 +12,8 @@ from prompt_toolkit.completion import NestedCompleter
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 import shlex
+import shutil
+import textwrap
 
 
 console = Console()
@@ -345,6 +347,95 @@ class Bot:
             overwrite=overwrite,
         )
 
+    def scrape_subreddit(
+        self,
+        subreddit_name: str,
+        sort: str = "new",
+        limit: int | None = None,
+        overwrite: bool = False,
+        subs_only: bool = False,
+    ):
+        """Scrape submissions from a subreddit.
+
+        - sort: one of 'new', 'hot', 'top', 'rising', 'controversial'
+        - limit: number of submissions to fetch (None = PRAW default)
+        - overwrite: if True, update existing submissions/threads
+        - subs_only: if True, only store the submission row (no comments)
+
+        Skips submissions already present in the DB unless overwrite is
+        requested.
+        """
+        sub = self.reddit.subreddit(subreddit_name)
+        sorter = sort.lower() if sort else "new"
+        # Map sorter name to subreddit method. If limit is None, call the
+        # listing without the limit parameter to avoid typing issues.
+        if sorter == "hot":
+            iterator = sub.hot() if limit is None else sub.hot(limit=limit)
+        elif sorter == "top":
+            iterator = sub.top() if limit is None else sub.top(limit=limit)
+        elif sorter == "rising":
+            iterator = sub.rising() if limit is None else sub.rising(limit=limit)
+        elif sorter == "controversial":
+            iterator = (
+                sub.controversial() if limit is None else sub.controversial(limit=limit)
+            )
+        else:
+            iterator = sub.new() if limit is None else sub.new(limit=limit)
+
+        processed = 0
+        skipped = 0
+        scraped = 0
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            with console.status(
+                f"Fetching submissions from r/{subreddit_name} ({sorter})...",
+                spinner="dots",
+            ):
+                for submission in iterator:
+                    processed += 1
+                    sname = getattr(submission, "name", None)
+                    # check existence
+                    cur.execute(
+                        "SELECT 1 FROM submissions WHERE name = %s;",
+                        (sname,),
+                    )
+                    exists = cur.fetchone() is not None
+                    if exists and not overwrite:
+                        skipped += 1
+                        continue
+                    # scrape either just the submission or entire thread
+                    if subs_only:
+                        # reuse existing method; pass overwrite flag
+                        try:
+                            self.scrape_submission(
+                                post_id=submission.id,
+                                overwrite=overwrite,
+                            )
+                        except Exception as e:
+                            console.print("Error scraping submission " f"{sname}: {e}")
+                            continue
+                    else:
+                        try:
+                            self.scrape_entire_thread(
+                                post_id=submission.id,
+                                overwrite=overwrite,
+                            )
+                        except Exception as e:
+                            console.print("Error scraping thread " f"{sname}: {e}")
+                            continue
+                    scraped += 1
+
+        console.print(
+            "r/"
+            + subreddit_name
+            + ": processed="
+            + str(processed)
+            + ", scraped="
+            + str(scraped)
+            + ", skipped="
+            + str(skipped)
+        )
+
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
             try:
@@ -374,10 +465,12 @@ def main():
                 "thread": None,
                 "submission": None,
                 "comment": None,
+                "subreddit": None,
                 # short aliases
                 "t": None,
                 "s": None,
                 "c": None,
+                "r": None,
             },
             "db": None,
             "exit": None,
@@ -426,31 +519,42 @@ def main():
         cmd = tokens[0].lower()
         if cmd == "scrape":
             if len(tokens) == 1:
-                return HTML(
-                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>  "
-                    "[--overwrite|-o] [--limit N] [--threshold N]"
+                base = (
+                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>"
+                    " [--overwrite|-o] [--limit N] [--threshold N]"
                 )
+                # wrap to terminal width to avoid overflow
+                try:
+                    cols = get_app().output.get_size().columns
+                except Exception:
+                    cols = shutil.get_terminal_size().columns
+                parts = textwrap.wrap(base, width=max(20, cols - 10))
+                return HTML("<br/>".join(parts))
             target = tokens[1].lower()
             if target in ("thread", "t", "entire", "entire_thread"):
-                return HTML(
-                    "<b>thread</b>: scrape submission + comments. "
-                    "Flags: <b>--overwrite/-o</b>, "
-                    "<b>--limit N</b> (None=all), <b>--threshold N</b>"
+                s = (
+                    "thread: scrape submission + comments. Flags: "
+                    "--overwrite/-o, --limit N (None=all), --threshold N"
                 )
-            if target in ("submission", "post", "s"):
-                return HTML(
-                    "<b>submission</b>: scrape only submission. "
-                    "Flags: <b>--overwrite/-o</b>"
+            elif target in ("subreddit", "r"):
+                s = (
+                    "subreddit: scrape subreddit "
+                    " Flags: --sort (new|hot|top|rising|controversial), "
+                    "--limit N, --subs-only, --overwrite/-o"
                 )
-            if target in ("comment", "c"):
-                return HTML(
-                    "<b>comment</b>: scrape a single comment. "
-                    "Flags: <b>--overwrite/-o</b>"
-                )
-            return HTML(
-                "Unknown scrape target. Use <b>thread</b>, "
-                "<b>submission</b>, or <b>comment</b>"
-            )
+            elif target in ("submission", "post", "s"):
+                s = "submission: scrape only submission. Flags: --overwrite/-o"
+            elif target in ("comment", "c"):
+                s = "comment: scrape a single comment. Flags: --overwrite/-o"
+            else:
+                s = "Unknown scrape target. Use thread, submission, comment, or subreddit"
+
+            try:
+                cols = get_app().output.get_size().columns
+            except Exception:
+                cols = shutil.get_terminal_size().columns
+            wrapped = textwrap.wrap(s, width=max(20, cols - 10))
+            return HTML("<br/>".join(wrapped))
 
         if cmd == "db":
             return HTML("<b>db &lt;SQL&gt;</b>: run SQL against the configured DB")
@@ -490,6 +594,8 @@ def main():
                 parser = argparse.ArgumentParser(add_help=False)
                 parser.add_argument("-o", "--overwrite", action="store_true")
                 parser.add_argument("--limit", type=str)
+                parser.add_argument("--subs-only", action="store_true")
+                parser.add_argument("--sort", type=str)
                 parser.add_argument("--threshold", type=int)
                 try:
                     ns, unknown = parser.parse_known_args(flags)
@@ -510,6 +616,8 @@ def main():
                             print(f"Invalid limit value: {ns.limit}")
                             limit = None
                 threshold = ns.threshold if ns.threshold is not None else 0
+                sort = ns.sort if getattr(ns, "sort", None) is not None else "new"
+                subs_only = bool(getattr(ns, "subs_only", False))
                 # thread synonyms
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
@@ -535,6 +643,16 @@ def main():
                 # comment
                 elif target in ("comment", "c"):
                     bot.scrape_comment(arg, overwrite=overwrite)
+                # subreddit (collection of submissions)
+                elif target in ("subreddit", "r"):
+                    # arg should be subreddit name (e.g. 'python' or 'r/python')
+                    bot.scrape_subreddit(
+                        arg,
+                        sort=sort,
+                        limit=limit,
+                        overwrite=overwrite,
+                        subs_only=subs_only,
+                    )
                 else:
                     print("Unknown target; use thread, submission or comment.")
             elif user_input.startswith("db "):
