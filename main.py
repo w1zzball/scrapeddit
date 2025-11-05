@@ -29,17 +29,6 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 # TODO skip scraped thread
 # TODO consider connection pooling with psycopg pool
 class Bot:
-    keys = [
-        "name",
-        "author",
-        "body",
-        "created_utc",
-        "edited",
-        "ups",
-        "parent_id",
-        "submission",
-        "subreddit_name_prefixed",
-    ]
 
     def __init__(
         self,
