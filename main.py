@@ -1,14 +1,14 @@
-import praw
-import psycopg
+import argparse
+from datetime import datetime, timezone
 from dotenv import load_dotenv, find_dotenv
 import os
-from datetime import datetime, timezone
+import praw
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import HTML
-import argparse
 from prompt_toolkit.completion import NestedCompleter
+import psycopg
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 import shlex
@@ -94,8 +94,6 @@ class Bot:
             "created_utc": datetime.fromtimestamp(
                 getattr(submission, "created_utc", 0), tz=timezone.utc
             ),
-            # Reddit's `edited` is either False or a timestamp (float).
-            # The DB column is boolean, so normalize to a bool.
             "edited": bool(getattr(submission, "edited", None)),
             "ups": getattr(submission, "ups", None),
             "subreddit": format(getattr(submission, "subreddit", None)),
@@ -147,7 +145,6 @@ class Bot:
                 """,
                 list(formatted_submission.values()),
             )
-            # fetch result to determine if an insert/update happened
             res = cur.fetchone()
         if res:
             console.print(f"Inserted/updated submission {res[0]}")
@@ -214,7 +211,6 @@ class Bot:
         """Get all comments in a thread, returns a CommentForest object."""
         submission = self.get_submission(post_id, post_url)
         comments = submission.comments
-        # replace_more may do network IO; show a spinner while it runs
         with console.status("Fetching comments...", spinner="dots"):
             comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
@@ -229,20 +225,14 @@ class Bot:
             "created_utc": datetime.fromtimestamp(
                 getattr(comment, "created_utc", 0), tz=timezone.utc
             ),
-            # `edited` may be False or a timestamp; normalize to boolean.
             "edited": bool(getattr(comment, "edited", None)),
             "ups": getattr(comment, "ups", None),
             "parent_id": getattr(comment, "parent_id", None),
-            # store submission id (base36 or prefixed). Prefer link_id
-            # when present; otherwise fall back to submission.id or
-            # a stringified submission object.
             "submission_id": (
                 getattr(comment, "link_id", None)
                 or getattr(getattr(comment, "submission", None), "id", None)
                 or format(getattr(comment, "submission", None))
             ),
-            # DB uses 'subreddit' column; keep the prefixed form
-            # (e.g. 'r/python').
             "subreddit": getattr(comment, "subreddit_name_prefixed", None),
         }
         return formatted_comment
@@ -285,8 +275,6 @@ class Bot:
 
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            # Show a progress bar for per-comment inserts and count
-            # inserts vs skipped.
             inserted = 0
             skipped = 0
             with Progress(
@@ -332,13 +320,10 @@ class Bot:
         threshold=0,
         overwrite: bool = False,
     ):
-        # Show stage-level status messages while scraping submission
-        # and comments
         with console.status("Scraping submission...", spinner="dots"):
             self.scrape_submission(
                 post_id=post_id, post_url=post_url, overwrite=overwrite
             )
-        # scrape_comments_in_thread has its own progress bar
         self.scrape_comments_in_thread(
             post_id=post_id,
             post_url=post_url,
@@ -367,8 +352,6 @@ class Bot:
         """
         sub = self.reddit.subreddit(subreddit_name)
         sorter = sort.lower() if sort else "new"
-        # Map sorter name to subreddit method. If limit is None, call the
-        # listing without the limit parameter to avoid typing issues.
         if sorter == "hot":
             iterator = sub.hot() if limit is None else sub.hot(limit=limit)
         elif sorter == "top":
@@ -394,7 +377,6 @@ class Bot:
                 for submission in iterator:
                     processed += 1
                     sname = getattr(submission, "name", None)
-                    # check existence
                     cur.execute(
                         "SELECT 1 FROM submissions WHERE name = %s;",
                         (sname,),
@@ -403,9 +385,7 @@ class Bot:
                     if exists and not overwrite:
                         skipped += 1
                         continue
-                    # scrape either just the submission or entire thread
                     if subs_only:
-                        # reuse existing method; pass overwrite flag
                         try:
                             self.scrape_submission(
                                 post_id=submission.id,
