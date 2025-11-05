@@ -56,26 +56,33 @@ class Bot:
             db_version = cur.fetchone()
             print(f"Connected to database, version: {db_version[0]}")
 
-    def scrape_thread_comments(
-        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
-    ):
-        # TODO add overwrite flag
-        comments = bot.get_comments_in_thread(
-            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
-        )
-        formatted_comments = map(self.format_comment, comments)  # TODO Progress bar
-        with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
-            for formatted_comment in formatted_comments:
-                cur.execute(
-                    """
-                INSERT INTO comments
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (name) DO NOTHING;
-                """,
-                    list(formatted_comment.values()),
-                )
-        print(f"Inserted {len(comments)} comments from thread {post_id} into database.")
+    def get_submission(self, post_id=None, post_url=None) -> praw.models.Submission:
+        if post_id:
+            submission = self.reddit.submission(post_id)
+        elif post_url:
+            submission = self.reddit.submission(post_url)
+        else:
+            raise Exception("provide either a post_id or post_url")
+        return submission
+
+    def format_submission(
+        self, submission: praw.models.Submission
+    ) -> dict[str, str | int | float | bool]:
+        formatted_submission = {
+            "name": getattr(submission, "name", None),
+            "author": format(getattr(submission, "author", None)),
+            "title": getattr(submission, "title", None),
+            "selftext": getattr(submission, "selftext", None),
+            "url": getattr(submission, "url", None),
+            "created_utc": datetime.fromtimestamp(
+                getattr(submission, "created_utc", 0), tz=timezone.utc
+            ),
+            "edited": getattr(submission, "edited", None),
+            "ups": getattr(submission, "ups", None),
+            "subreddit": format(getattr(submission, "subreddit", None)),
+            "permalink": format(getattr(submission, "permalink", None)),
+        }
+        return formatted_submission
 
     def scrape_submission(self, post_id=None, post_url=None):
         # TODO add overwrite flag
@@ -93,42 +100,6 @@ class Bot:
             )
         print(f"Inserted submission with id: {post_id} into database.")
 
-    def scrape_entire_thread(
-        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
-    ):
-        self.scrape_submission(post_id=post_id, post_url=post_url)
-        self.scrape_thread_comments(
-            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
-        )
-
-    def db_execute(self, sql_str):
-        with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
-            cur.execute(sql_str)
-            print(cur.fetchone())
-
-    def get_top_level_comments_in_thread(
-        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
-    ):
-        if post_id:
-            top_level_comments = self.reddit.submission(post_id).comments
-        elif post_url:
-            top_level_comments = self.reddit.submission(post_url).comments
-        else:
-            raise Exception("provide either a post_id or post_url")
-        top_level_comments.replace_more(limit=limit, threshold=threshold)
-        for top_level_comment in top_level_comments:
-            print(top_level_comment.body)
-
-    def get_submission(self, post_id=None, post_url=None):
-        if post_id:
-            submission = self.reddit.submission(post_id)
-        elif post_url:
-            submission = self.reddit.submission(post_url)
-        else:
-            raise Exception("provide either a post_id or post_url")
-        return submission
-
     def get_comments_in_thread(
         self,
         post_id=None,
@@ -141,8 +112,6 @@ class Bot:
         comments = submission.comments
         comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
-        # for comment in comments.list():
-        #     return comment.body
 
     def format_comment(
         self, comment: praw.models.Comment
@@ -164,27 +133,43 @@ class Bot:
         }
         return formatted_comment
 
-    def format_submission(
-        self, submission: praw.models.Submission
-    ) -> dict[str, str | int | float | bool]:
-        formatted_submission = {
-            "name": getattr(submission, "name", None),
-            "author": format(getattr(submission, "author", None)),
-            "title": getattr(submission, "title", None),
-            "selftext": getattr(submission, "selftext", None),
-            "url": getattr(submission, "url", None),
-            "created_utc": datetime.fromtimestamp(
-                getattr(submission, "created_utc", 0), tz=timezone.utc
-            ),
-            "edited": getattr(submission, "edited", None),
-            "ups": getattr(submission, "ups", None),
-            "subreddit": format(getattr(submission, "subreddit", None)),
-            "permalink": format(getattr(submission, "permalink", None)),
-        }
-        return formatted_submission
+    def scrape_comments_in_thread(
+        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+    ):
+        # TODO add overwrite flag
+        comments = bot.get_comments_in_thread(
+            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+        )
+        formatted_comments = map(self.format_comment, comments)  # TODO Progress bar
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            for formatted_comment in formatted_comments:
+                cur.execute(
+                    """
+                INSERT INTO comments
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                ON CONFLICT (name) DO NOTHING;
+                """,
+                    list(formatted_comment.values()),
+                )
+        print(f"Inserted {len(comments)} comments from thread {post_id} into database.")
+
+    def scrape_entire_thread(
+        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+    ):
+        self.scrape_submission(post_id=post_id, post_url=post_url)
+        self.scrape_comments_in_thread(
+            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+        )
+
+    def db_execute(self, sql_str):
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            cur.execute(sql_str)
+            print(cur.fetchone())
 
 
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
 
-bot.scrape_entire_thread("1okgge4")
+bot.scrape_entire_thread("1oj1wui")
