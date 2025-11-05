@@ -27,7 +27,6 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 
 # TODO add logging
 # TODO skip scraped thread
-# TODO insert OP
 # TODO consider connection pooling with psycopg pool
 class Bot:
     keys = [
@@ -43,8 +42,16 @@ class Bot:
     ]
 
     def __init__(
-        self, *, username, password, client_id, client_secret, user_agent, db_string
+        self,
+        *,
+        username,
+        password,
+        client_id,
+        client_secret,
+        user_agent,
+        db_string,
     ) -> None:
+        # reddit API
         self.reddit = praw.Reddit(
             username=username,
             password=password,
@@ -53,16 +60,12 @@ class Bot:
             user_agent=user_agent,
         )
         # db connection
-        # TODO look into autocommit
         self.conn = psycopg.connect(db_string)
         self.conn.autocommit = True
         with self.conn.cursor() as cur:
             cur.execute("SELECT version();")
             db_version = cur.fetchone()
             print(f"Connected to database, version: {db_version[0]}")
-
-    # TODO implement scrape submision (OP)
-    # TODO create submission table
 
     def scrape_thread_comments(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
@@ -101,15 +104,19 @@ class Bot:
             )
         print(f"Inserted submission with id: {post_id} into database.")
 
+    def scrape_entire_thread(
+        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+    ):
+        self.scrape_submission(post_id=post_id, post_url=post_url)
+        self.scrape_thread_comments(
+            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+        )
+
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
             cur.execute(sql_str)
             print(cur.fetchone())
-
-    # def write_to_db(self, formatted_comment):
-    #     with self.conn.cursor() as cur:
-    #         cur
 
     def get_top_level_comments_in_thread(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
@@ -191,12 +198,4 @@ class Bot:
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
 
-# comments = bot.get_comments_in_thread("1oohc4a", limit=None)
-
-# thread with deleted comments
-# TODO factor into bot class
-# comments = bot.get_comments_in_thread("1om49zc", limit=None)
-# subm = bot.reddit.submission("1oohc4a")
-# print(bot.format_submission(subm))
-# bot.scrape_thread_comments("1oohc4a")
-bot.scrape_submission("1oohc4a")
+bot.scrape_entire_thread("1okgge4")
