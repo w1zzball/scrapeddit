@@ -4,6 +4,7 @@ from dotenv import load_dotenv, find_dotenv
 import os
 from datetime import datetime, timezone
 from prompt_toolkit import PromptSession
+import argparse
 from prompt_toolkit.completion import NestedCompleter
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
@@ -354,38 +355,30 @@ def main():
                 limit = None
                 threshold = 0
                 # parse remaining tokens as flags
-                i = 3
-                while i < len(tokens):
-                    t = tokens[i]
-                    if t in ("--overwrite", "-o"):
-                        overwrite = True
-                        i += 1
-                    elif t == "--limit":
-                        if i + 1 < len(tokens):
-                            v = tokens[i + 1]
-                            if v.lower() == "none":
-                                limit = None
-                            else:
-                                try:
-                                    limit = int(v)
-                                except ValueError:
-                                    print(f"Invalid limit value: {v}")
-                                    limit = None
-                            i += 2
-                        else:
-                            i += 1
-                    elif t == "--threshold":
-                        if i + 1 < len(tokens):
-                            try:
-                                threshold = int(tokens[i + 1])
-                            except ValueError:
-                                print(f"Invalid threshold value: {tokens[i+1]}")
-                            i += 2
-                        else:
-                            i += 1
+                flags = tokens[3:]
+                parser = argparse.ArgumentParser(add_help=False)
+                parser.add_argument("-o", "--overwrite", action="store_true")
+                parser.add_argument("--limit", type=str)
+                parser.add_argument("--threshold", type=int)
+                try:
+                    ns, unknown = parser.parse_known_args(flags)
+                except Exception as e:
+                    print("Error parsing flags:", e)
+                    continue
+                overwrite = bool(ns.overwrite)
+                # limit arg may be 'None' or an integer
+                if ns.limit is None:
+                    limit = None
+                else:
+                    if ns.limit.lower() == "none":
+                        limit = None
                     else:
-                        print(f"Unknown flag: {t}")
-                        i += 1
+                        try:
+                            limit = int(ns.limit)
+                        except ValueError:
+                            print(f"Invalid limit value: {ns.limit}")
+                            limit = None
+                threshold = ns.threshold if ns.threshold is not None else 0
                 # thread synonyms
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
