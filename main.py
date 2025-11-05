@@ -2,6 +2,7 @@ import praw
 import psycopg
 from dotenv import load_dotenv, find_dotenv
 import os
+from datetime import datetime, timezone
 
 
 def load_auth_data_from_env() -> dict[str, str | None]:
@@ -27,7 +28,7 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 # TODO add logging
 class Bot:
     def __init__(
-        self, *, username, password, client_id, client_secret, user_agent
+        self, *, username, password, client_id, client_secret, user_agent, db_string
     ) -> None:
         self.reddit = praw.Reddit(
             username=username,
@@ -36,6 +37,27 @@ class Bot:
             client_secret=client_secret,
             user_agent=user_agent,
         )
+        # db connection
+        self.conn = psycopg.connect(db_string)
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT version();")
+            db_version = cur.fetchone()
+            print(f"Connected to database, version: {db_version[0]}")
+
+    def scrape_thread(
+        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+    ):
+        pass
+
+    def db_execute(self, sql_str):
+        with self.conn.cursor() as cur:
+            cur.execute("SET search_path TO reddit;")
+            cur.execute(sql_str)
+            print(cur.fetchone())
+
+    # def write_to_db(self, formatted_comment):
+    #     with self.conn.cursor() as cur:
+    #         cur
 
     def get_top_level_comments_in_thread(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
@@ -73,16 +95,63 @@ class Bot:
 auth_data = load_auth_data_from_env()
 bot = Bot(**auth_data)
 
-comments = bot.get_comments_in_thread("1oohc4a", limit=None)
+# comments = bot.get_comments_in_thread("1oohc4a", limit=None)
+
+# thread with deleted comments
+comments = bot.get_comments_in_thread("1om49zc", limit=None)
+
 keys = [
     "name",
     "author",
     "body",
     "created_utc",
     "edited",
+    "ups",
     "parent_id",
     "submission",
     "subreddit_name_prefixed",
 ]
-for k in keys:
-    print(f"{k}: {getattr(comments[0], k, None)}")
+
+
+def format_comment(comment: praw.models.Comment) -> dict[str, str | int | float | bool]:
+    formatted_comment = {
+        "name": getattr(comment, "name", None),
+        "author": format(getattr(comment, "author", None)),
+        "body": getattr(comment, "body", None),
+        "created_utc": datetime.fromtimestamp(
+            getattr(comment, "created_utc", 0), tz=timezone.utc
+        ),
+        "edited": getattr(comment, "edited", None),
+        "ups": getattr(comment, "ups", None),
+        "parent_id": getattr(comment, "parent_id", None),
+        "submission": format(getattr(comment, "submission", None)),
+        "subreddit_name_prefixed": getattr(comment, "subreddit_name_prefixed", None),
+    }
+    return formatted_comment
+
+
+# for k in keys:
+#     print(f"{k}: {getattr(comments[0], k, None)}")
+
+# bot.db_execute("SELECT * FROM comment;")
+
+# print(format_comment(comments[0]))
+
+formatted_comment = format_comment(comments[0])
+# print(formatted_comment.values())
+values = str(list(formatted_comment.values()))[1:-1]
+sql_str = f"INSERT INTO comments VALUES ({values}); "
+# print(sql_str)
+bot.db_execute("SELECT * FROM comments")
+# bot.db_execute(sql_str)
+cur = bot.conn.cursor()
+cur.execute("SET search_path TO reddit;")
+cur.execute(
+    """
+    INSERT INTO comments
+    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """,
+    list(formatted_comment.values()),
+)
+bot.conn.commit()
+cur.close()
