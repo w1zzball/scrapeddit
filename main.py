@@ -3,6 +3,7 @@ import psycopg
 from dotenv import load_dotenv, find_dotenv
 import os
 from datetime import datetime, timezone
+from prompt_toolkit import PromptSession
 
 
 def load_auth_data_from_env() -> dict[str, str | None]:
@@ -137,7 +138,7 @@ class Bot:
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
     ):
         # TODO add overwrite flag
-        comments = bot.get_comments_in_thread(
+        comments = self.get_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
         formatted_comments = map(self.format_comment, comments)  # TODO Progress bar
@@ -169,7 +170,31 @@ class Bot:
             print(cur.fetchone())
 
 
-auth_data = load_auth_data_from_env()
-bot = Bot(**auth_data)
+def main():
+    auth_data = load_auth_data_from_env()
+    bot = Bot(**auth_data)
+    session = PromptSession()
+    while True:
+        try:
+            user_input = session.prompt("scrapeddit> ")
+            if user_input.startswith("scrape "):
+                _, post_id_or_url = user_input.split(" ", 1)
+                if post_id_or_url.startswith("http"):
+                    bot.scrape_entire_thread(post_url=post_id_or_url)
+                else:
+                    bot.scrape_entire_thread(post_id=post_id_or_url)
+            elif user_input.startswith("db "):
+                _, sql_str = user_input.split(" ", 1)
+                bot.db_execute(sql_str)
+            elif user_input in {"exit", "quit"}:
+                break
+            else:
+                print("Unknown command.")
+        except KeyboardInterrupt:
+            break
+        except EOFError:
+            break
 
-bot.scrape_entire_thread("1om1su5")
+
+if __name__ == "__main__":
+    main()
