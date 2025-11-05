@@ -7,6 +7,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
+import shlex
 
 
 console = Console()
@@ -278,14 +279,25 @@ class Bot:
             )
 
     def scrape_entire_thread(
-        self, post_id=None, post_url=None, limit: int | None = None, threshold=0
+        self,
+        post_id=None,
+        post_url=None,
+        limit: int | None = None,
+        threshold=0,
+        overwrite: bool = False,
     ):
         # Show stage-level status messages while scraping submission and comments
         with console.status("Scraping submission...", spinner="dots"):
-            self.scrape_submission(post_id=post_id, post_url=post_url)
+            self.scrape_submission(
+                post_id=post_id, post_url=post_url, overwrite=overwrite
+            )
         # scrape_comments_in_thread has its own progress bar
         self.scrape_comments_in_thread(
-            post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
+            post_id=post_id,
+            post_url=post_url,
+            limit=limit,
+            threshold=threshold,
+            overwrite=overwrite,
         )
 
     def db_execute(self, sql_str):
@@ -326,28 +338,79 @@ def main():
             #   scrape submission <id|url>
             #   scrape comment <comment_id>
             if user_input.startswith("scrape "):
-                parts = user_input.split(" ", 2)
-                if len(parts) < 3:
-                    print("Usage: scrape <target> <id_or_url>")
-                    print("Targets: thread | submission | comment")
+                # allow flags after the id/url, e.g.:
+                #   scrape thread <id|url> --overwrite --limit 0 --threshold 0
+                tokens = shlex.split(user_input)
+                if len(tokens) < 3:
+                    print(
+                        "Usage: scrape <target> <id_or_url> [--overwrite] [--limit N] [--threshold N]"
+                    )
                     continue
-                _, target, arg = parts
+                _, target = tokens[0], tokens[1]
                 target = target.lower()
+                arg = tokens[2]
+                # defaults
+                overwrite = False
+                limit = None
+                threshold = 0
+                # parse remaining tokens as flags
+                i = 3
+                while i < len(tokens):
+                    t = tokens[i]
+                    if t in ("--overwrite", "-o"):
+                        overwrite = True
+                        i += 1
+                    elif t == "--limit":
+                        if i + 1 < len(tokens):
+                            v = tokens[i + 1]
+                            if v.lower() == "none":
+                                limit = None
+                            else:
+                                try:
+                                    limit = int(v)
+                                except ValueError:
+                                    print(f"Invalid limit value: {v}")
+                                    limit = None
+                            i += 2
+                        else:
+                            i += 1
+                    elif t == "--threshold":
+                        if i + 1 < len(tokens):
+                            try:
+                                threshold = int(tokens[i + 1])
+                            except ValueError:
+                                print(f"Invalid threshold value: {tokens[i+1]}")
+                            i += 2
+                        else:
+                            i += 1
+                    else:
+                        print(f"Unknown flag: {t}")
+                        i += 1
                 # thread synonyms
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
-                        bot.scrape_entire_thread(post_url=arg)
+                        bot.scrape_entire_thread(
+                            post_url=arg,
+                            limit=limit,
+                            threshold=threshold,
+                            overwrite=overwrite,
+                        )
                     else:
-                        bot.scrape_entire_thread(post_id=arg)
+                        bot.scrape_entire_thread(
+                            post_id=arg,
+                            limit=limit,
+                            threshold=threshold,
+                            overwrite=overwrite,
+                        )
                 # submission synonyms
                 elif target in ("submission", "post", "s"):
                     if arg.startswith("http"):
-                        bot.scrape_submission(post_url=arg)
+                        bot.scrape_submission(post_url=arg, overwrite=overwrite)
                     else:
-                        bot.scrape_submission(post_id=arg)
+                        bot.scrape_submission(post_id=arg, overwrite=overwrite)
                 # comment
                 elif target in ("comment", "c"):
-                    bot.scrape_comment(arg)
+                    bot.scrape_comment(arg, overwrite=overwrite)
                 else:
                     print("Unknown target; use thread, submission or comment.")
             elif user_input.startswith("db "):
