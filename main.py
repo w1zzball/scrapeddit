@@ -5,6 +5,11 @@ import os
 from datetime import datetime, timezone
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import NestedCompleter
+from rich.console import Console
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
+
+
+console = Console()
 
 
 def load_auth_data_from_env() -> dict[str, str | None]:
@@ -79,7 +84,9 @@ class Bot:
             "created_utc": datetime.fromtimestamp(
                 getattr(submission, "created_utc", 0), tz=timezone.utc
             ),
-            "edited": getattr(submission, "edited", None),
+            # Reddit's `edited` is either False or a timestamp (float).
+            # The DB column is boolean, so normalize to a bool.
+            "edited": bool(getattr(submission, "edited", None)),
             "ups": getattr(submission, "ups", None),
             "subreddit": format(getattr(submission, "subreddit", None)),
             "permalink": format(getattr(submission, "permalink", None)),
@@ -129,13 +136,15 @@ class Bot:
         self,
         post_id=None,
         post_url=None,
-        limit: int | None = 0,
+        limit: int | None = None,
         threshold=0,
     ) -> list[praw.models.Comment | praw.models.MoreComments]:
         """Get all comments in a thread, returns a CommentForest object."""
         submission = self.get_submission(post_id, post_url)
         comments = submission.comments
-        comments.replace_more(limit=limit, threshold=threshold)
+        # replace_more may do network IO; show a spinner while it runs
+        with console.status("Fetching comments...", spinner="dots"):
+            comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
 
     def format_comment(
@@ -148,7 +157,8 @@ class Bot:
             "created_utc": datetime.fromtimestamp(
                 getattr(comment, "created_utc", 0), tz=timezone.utc
             ),
-            "edited": getattr(comment, "edited", None),
+            # `edited` may be False or a timestamp; normalize to boolean.
+            "edited": bool(getattr(comment, "edited", None)),
             "ups": getattr(comment, "ups", None),
             "parent_id": getattr(comment, "parent_id", None),
             "submission": format(getattr(comment, "submission", None)),
@@ -159,31 +169,53 @@ class Bot:
         return formatted_comment
 
     def scrape_comments_in_thread(
-        self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
+        self, post_id=None, post_url=None, limit: int | None = None, threshold=0
     ):
         # TODO add overwrite flag
         comments = self.get_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
-        formatted_comments = map(self.format_comment, comments)
-        # TODO Progress bar
+        total = len(comments)
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            for formatted_comment in formatted_comments:
-                cur.execute(
-                    """
+            # show a progress bar for per-comment inserts and count inserts vs skipped
+            inserted = 0
+            skipped = 0
+            with Progress(
+                TextColumn("{task.description}"),
+                BarColumn(),
+                TimeRemainingColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Inserting comments", total=total)
+                for comment in comments:
+                    formatted_comment = self.format_comment(comment)
+                    cur.execute(
+                        """
                 INSERT INTO comments
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT (name) DO NOTHING;
+                ON CONFLICT (name) DO NOTHING
+                RETURNING name;
                 """,
-                    list(formatted_comment.values()),
-                )
-        print(f"Inserted {len(comments)} comments from thread {post_id} into database.")
+                        list(formatted_comment.values()),
+                    )
+                    result = cur.fetchone()
+                    if result:
+                        inserted += 1
+                    else:
+                        skipped += 1
+                    progress.advance(task)
+        console.print(
+            f"Fetched {total} comments — inserted {inserted}, skipped {skipped} (duplicates)."
+        )
 
     def scrape_entire_thread(
         self, post_id=None, post_url=None, limit: int | None = 0, threshold=0
     ):
-        self.scrape_submission(post_id=post_id, post_url=post_url)
+        # Show stage-level status messages while scraping submission and comments
+        with console.status("Scraping submission...", spinner="dots"):
+            self.scrape_submission(post_id=post_id, post_url=post_url)
+        # scrape_comments_in_thread has its own progress bar
         self.scrape_comments_in_thread(
             post_id=post_id, post_url=post_url, limit=limit, threshold=threshold
         )
