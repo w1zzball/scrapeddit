@@ -108,6 +108,7 @@ class Bot:
         post_id=None,
         post_url=None,
         overwrite: bool = False,
+        index=None,
     ):
         """Fetch a submission and insert it into the DB.
 
@@ -149,7 +150,7 @@ class Bot:
             )
             res = cur.fetchone()
         if res:
-            console.print(f"Inserted/updated submission {res[0]}")
+            console.print(f"[{index}] Inserted/updated submission {res[0]}")
         else:
             console.print("No change to submission (conflict and skipped)")
 
@@ -317,10 +318,11 @@ class Bot:
         limit: int | None = None,
         threshold=0,
         overwrite: bool = False,
+        index: int | None = None,
     ):
         with console.status("Scraping submission...", spinner="dots"):
             self.scrape_submission(
-                post_id=post_id, post_url=post_url, overwrite=overwrite
+                post_id=post_id, post_url=post_url, overwrite=overwrite, index=index
             )
         self.scrape_comments_in_thread(
             post_id=post_id,
@@ -334,7 +336,7 @@ class Bot:
         self,
         subreddit_name: str,
         sort: str = "new",
-        limit: int | None = None,
+        limit: int | None = 10,
         overwrite: bool = False,
         subs_only: bool = False,
     ):
@@ -376,7 +378,7 @@ class Bot:
                 f"Fetching submissions from r/{subreddit_name} ({sorter})...",
                 spinner="dots",
             ):
-                for submission in iterator:
+                for index, submission in enumerate(iterator):
                     processed += 1
                     sname = getattr(submission, "name", None)
                     cur.execute(
@@ -392,6 +394,7 @@ class Bot:
                             self.scrape_submission(
                                 post_id=submission.id,
                                 overwrite=overwrite,
+                                index=index,
                             )
                         except Exception as e:
                             console.print("Error scraping submission:")
@@ -403,6 +406,7 @@ class Bot:
                             self.scrape_entire_thread(
                                 post_id=submission.id,
                                 overwrite=overwrite,
+                                index=index,
                             )
                         except Exception as e:
                             console.print("Error scraping thread:")
