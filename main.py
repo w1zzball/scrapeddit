@@ -577,6 +577,7 @@ def main():
             return HTML("<br/>".join(wrapped))
 
         if cmd == "clear":
+            # TODO get rid of this mess
             s = (
                 "clear: remove rows from tables. Usage: clear "
                 "&lt;submissions|comments|all&gt;. "
@@ -648,11 +649,15 @@ def main():
                         except ValueError:
                             print(f"Invalid limit value: {ns.limit}")
                             limit = None
+                # If invoking scrape subreddit and no --limit provided, default to 10
+                if target in ("subreddit", "r") and limit is None:
+                    limit = 10
                 threshold = ns.threshold if ns.threshold is not None else 0
                 sort = ns.sort if ns.sort is not None else "new"
                 subs_only = bool(getattr(ns, "subs_only", False))
                 # support clear command: handled below
                 # thread synonyms
+                # TODO clear up limit handling here and above
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
                         bot.scrape_entire_thread(
