@@ -15,6 +15,7 @@ import shlex
 import shutil
 import textwrap
 from typing import Any
+import time
 
 
 console = Console()
@@ -359,6 +360,7 @@ class Bot:
         Skips submissions already present in the DB unless overwrite is
         requested.
         """
+        start_time = time.perf_counter()
         sub = self.reddit.subreddit(subreddit_name)
         sorter = sort.lower() if sort else "new"
         if sorter == "hot":
@@ -435,6 +437,7 @@ class Bot:
             + str(scraped)
             + ", skipped="
             + str(skipped)
+            + f" — took {time.perf_counter() - start_time:.2f}s"
         )
 
     def db_execute(self, sql_str):
