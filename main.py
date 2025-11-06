@@ -428,6 +428,12 @@ class Bot:
                             continue
                     scraped += 1
 
+        # end of work for subreddit scraping
+        elapsed = time.perf_counter() - start_time
+        hrs = int(elapsed // 3600)
+        mins = int((elapsed % 3600) // 60)
+        secs = int(elapsed % 60)
+        duration = f"{hrs:02d}:{mins:02d}:{secs:02d}"
         console.print(
             "r/"
             + subreddit_name
@@ -437,7 +443,7 @@ class Bot:
             + str(scraped)
             + ", skipped="
             + str(skipped)
-            + f" — took {time.perf_counter() - start_time:.2f}s"
+            + f" — took {duration}"
         )
 
     def db_execute(self, sql_str):
@@ -568,9 +574,9 @@ def main():
                 )
             elif target in ("subreddit", "r"):
                 s = (
-                    "subreddit: scrape many submissions (defaults to "
-                    "threads). Flags: --sort (new|hot|top|rising|"
-                    "controversial), --limit N, --subs-only, "
+                    "subreddit: scrape many submissions "
+                    "Flags: --sort (new|hot|top|rising|"
+                    "controversial), --limit N (10), --subs-only, "
                     "--overwrite/-o"
                 )
             elif target in ("submission", "post", "s"):
