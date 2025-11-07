@@ -327,12 +327,13 @@ class Bot:
                 index=index,
                 total=limit,
             )
-        self.scrape_comments_in_thread(
-            post_id=post_id,
-            post_url=post_url,
-            threshold=threshold,
-            overwrite=overwrite,
-        )
+        with console.status("Scraping comments...", spinner="dots"):
+            self.scrape_comments_in_thread(
+                post_id=post_id,
+                post_url=post_url,
+                threshold=threshold,
+                overwrite=overwrite,
+            )
 
     def scrape_subreddit(
         self,
