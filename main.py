@@ -10,7 +10,6 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import NestedCompleter
 import psycopg
 from rich.console import Console
-from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 import shlex
 import shutil
 import textwrap
@@ -21,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 console = Console()
 
 
+# TODO fix limit arg drilling and general mess regarding limit passing
 def load_auth_data_from_env() -> dict[str, str | None]:
     env_path = find_dotenv()
     if not env_path:
@@ -219,8 +219,8 @@ class Bot:
         """Get all comments in a thread, returns a CommentForest object."""
         submission = self.get_submission(post_id, post_url)
         comments = submission.comments
-        with console.status("Fetching comments...", spinner="dots"):
-            comments.replace_more(limit=limit, threshold=threshold)
+        # with console.status("Fetching comments...", spinner="dots"):
+        comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
 
     def format_comment(
