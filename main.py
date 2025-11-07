@@ -16,7 +16,7 @@ import shutil
 import textwrap
 from typing import Any
 import time
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 console = Console()
 
@@ -342,102 +342,82 @@ class Bot:
         limit: int | None = 10,
         overwrite: bool = False,
         subs_only: bool = False,
+        max_workers: int = 5,  # set to respect rate limits
     ):
-        """Scrape submissions from a subreddit.
-
-        - sort: one of 'new', 'hot', 'top', 'rising', 'controversial'
-        - limit: number of submissions to fetch (None = PRAW default)
-        - overwrite: if True, update existing submissions/threads
-        - subs_only: if True, only store the submission row (no comments)
-
-        Skips submissions already present in the DB unless overwrite is
-        requested.
-        """
         start_time = time.perf_counter()
         sub = self.reddit.subreddit(subreddit_name)
-        sorter = sort.lower() if sort else "new"
-        if sorter == "hot":
-            iterator = sub.hot() if limit is None else sub.hot(limit=limit)
-        elif sorter == "top":
-            iterator = sub.top() if limit is None else sub.top(limit=limit)
-        elif sorter == "rising":
-            if limit is None:
-                iterator = sub.rising()
-            else:
-                iterator = sub.rising(limit=limit)
-        elif sorter == "controversial":
-            if limit is None:
-                iterator = sub.controversial()
-            else:
-                iterator = sub.controversial(limit=limit)
-        else:
-            iterator = sub.new() if limit is None else sub.new(limit=limit)
 
-        processed = 0
-        skipped = 0
-        scraped = 0
+        sorter = sort.lower()
+        fetchers = {
+            "new": sub.new,
+            "hot": sub.hot,
+            "top": sub.top,
+            "rising": sub.rising,
+            "controversial": sub.controversial,
+        }
+        iterator = fetchers.get(sorter, sub.new)(limit=limit)
+
+        submissions = list(iterator)
+        if not submissions:
+            console.print("No submissions found.")
+            return
+
+        # formatted submissions batch
+        formatted_rows = [
+            tuple(self.format_submission(s).values()) for s in submissions
+        ]
+        cols = [
+            "name",
+            "author",
+            "title",
+            "selftext",
+            "url",
+            "created_utc",
+            "edited",
+            "ups",
+            "subreddit",
+            "permalink",
+        ]
+        placeholders = ", ".join(["%s"] * len(cols))
+        sql_stmt = f"""
+            INSERT INTO submissions ({', '.join(cols)})
+            VALUES ({placeholders})
+            {'ON CONFLICT (name) DO NOTHING' if not overwrite else
+            'ON CONFLICT (name) DO UPDATE SET author=EXCLUDED.author, title=EXCLUDED.title'}
+        """
+
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            with console.status(
-                f"Fetching submissions from r/{subreddit_name} ({sorter})...",
-                spinner="dots",
-            ):
-                for index, submission in enumerate(iterator, 1):
-                    processed += 1
-                    sname = getattr(submission, "name", None)
-                    cur.execute(
-                        "SELECT 1 FROM submissions WHERE name = %s;",
-                        (sname,),
-                    )
-                    exists = cur.fetchone() is not None
-                    if exists and not overwrite:
-                        skipped += 1
-                        continue
-                    if subs_only:
-                        try:
-                            self.scrape_submission(
-                                post_id=submission.id,
-                                overwrite=overwrite,
-                                index=index,
-                                total=limit,
-                            )
-                        except Exception as e:
-                            console.print("Error scraping submission:")
-                            console.print(sname)
-                            console.print(str(e))
-                            continue
-                    else:
-                        try:
-                            self.scrape_entire_thread(
-                                post_id=submission.id,
-                                overwrite=overwrite,
-                                index=index,
-                                limit=limit,
-                            )
-                        except Exception as e:
-                            console.print("Error scraping thread:")
-                            console.print(sname)
-                            console.print(str(e))
-                            continue
-                    scraped += 1
+            cur.executemany(sql_stmt, formatted_rows)
+        self.conn.commit()
 
-        # end of work for subreddit scraping
+        console.print(f"Inserted {len(submissions)} submissions.")
+
+        # threaded comment scraping
+        if not subs_only:
+            console.print(
+                f"Fetching comments for {len(submissions)} threads (max {max_workers} workers)..."
+            )
+
+            def scrape_one(submission):
+                """Worker: scrape and insert all comments for one submission."""
+                try:
+                    self.scrape_comments_in_thread(submission.id, overwrite=overwrite)
+                    return submission.id, None
+                except Exception as e:
+                    return submission.id, str(e)
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(scrape_one, s): s.id for s in submissions}
+                for future in as_completed(futures):
+                    sid, err = future.result()
+                    if err:
+                        console.print(f"[red]Error scraping {sid}: {err}[/red]")
+                    else:
+                        console.print(f"[green]✔ {sid} done[/green]")
+
         elapsed = time.perf_counter() - start_time
-        hrs = int(elapsed // 3600)
-        mins = int((elapsed % 3600) // 60)
-        secs = int(elapsed % 60)
-        duration = f"{hrs:02d}:{mins:02d}:{secs:02d}"
-        console.print(
-            "r/"
-            + subreddit_name
-            + ": processed="
-            + str(processed)
-            + ", scraped="
-            + str(scraped)
-            + ", skipped="
-            + str(skipped)
-            + f" — took {duration}"
-        )
+        console.print(f"Done in {elapsed:.2f}s.")
 
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
