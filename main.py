@@ -223,24 +223,42 @@ class Bot:
             comments.replace_more(limit=limit, threshold=threshold)
         return comments.list()
 
-    def format_comment(self, comment: Any) -> dict[str, str | int | float | bool]:
-        formatted_comment = {
-            "name": getattr(comment, "name", None),
-            "author": format(getattr(comment, "author", None)),
-            "body": getattr(comment, "body", None),
-            "created_utc": datetime.fromtimestamp(
-                getattr(comment, "created_utc", 0), tz=timezone.utc
-            ),
-            "edited": bool(getattr(comment, "edited", None)),
-            "ups": getattr(comment, "ups", None),
-            "parent_id": getattr(comment, "parent_id", None),
-            "submission_id": (
+    def format_comment(
+        self, comment: Any
+    ) -> Any:  # dict[str, str | int | float | bool]:
+        # DICT return
+        # formatted_comment = {
+        #     "name": getattr(comment, "name", None),
+        #     "author": format(getattr(comment, "author", None)),
+        #     "body": getattr(comment, "body", None),
+        #     "created_utc": datetime.fromtimestamp(
+        #         getattr(comment, "created_utc", 0), tz=timezone.utc
+        #     ),
+        #     "edited": bool(getattr(comment, "edited", None)),
+        #     "ups": getattr(comment, "ups", None),
+        #     "parent_id": getattr(comment, "parent_id", None),
+        #     "submission_id": (
+        #         getattr(comment, "link_id", None)
+        #         or getattr(getattr(comment, "submission", None), "id", None)
+        #         or format(getattr(comment, "submission", None))
+        #     ),
+        #     "subreddit": getattr(comment, "subreddit_name_prefixed", None),
+        # }
+        formatted_comment = (
+            getattr(comment, "name", None),
+            format(getattr(comment, "author", None)),
+            getattr(comment, "body", None),
+            datetime.fromtimestamp(getattr(comment, "created_utc", 0), tz=timezone.utc),
+            bool(getattr(comment, "edited", None)),
+            getattr(comment, "ups", None),
+            getattr(comment, "parent_id", None),
+            (
                 getattr(comment, "link_id", None)
                 or getattr(getattr(comment, "submission", None), "id", None)
                 or format(getattr(comment, "submission", None))
             ),
-            "subreddit": getattr(comment, "subreddit_name_prefixed", None),
-        }
+            getattr(comment, "subreddit_name_prefixed", None),
+        )
         return formatted_comment
 
     def scrape_comments_in_thread(
@@ -281,42 +299,16 @@ class Bot:
 
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            inserted = 0
-            skipped = 0
-            with Progress(
-                TextColumn("{task.description}"),
-                BarColumn(),
-                TimeRemainingColumn(),
-                console=console,
-            ) as progress:
-                task = progress.add_task("Inserting comments", total=total)
-                for comment in comments:
-                    formatted_comment = self.format_comment(comment)
-                    cur.execute(
-                        f"""
+            formatted_comments = list(map(self.format_comment, comments))
+            cur.executemany(
+                f"""
                 INSERT INTO comments {cols}
                 VALUES ({placeholders})
                 {conflict_clause}
                 """,
-                        list(formatted_comment.values()),
-                    )
-                    result = cur.fetchone()
-                    if result:
-                        inserted += 1
-                    else:
-                        skipped += 1
-                    progress.advance(task)
-        if overwrite:
-            msg = (
-                f"Fetched {total} comments — inserted/updated {inserted}, "
-                f"skipped {skipped}."
+                formatted_comments,
             )
-        else:
-            msg = (
-                f"Fetched {total} comments — inserted {inserted}, "
-                f"skipped {skipped} (duplicates)."
-            )
-        console.print(msg)
+        console.print(f"Fetched {total} comments")
 
     def scrape_entire_thread(
         self,
