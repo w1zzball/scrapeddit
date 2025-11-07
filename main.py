@@ -269,7 +269,7 @@ class Bot:
         threshold=0,
         overwrite: bool = False,
     ):
-        """Scrape all comments in a thread and insert into DB.
+        """Scrape all comments in a thread and insert/update into DB.
 
         If overwrite=True, existing comments will be updated.
         """
@@ -280,35 +280,111 @@ class Bot:
             threshold=threshold,
         )
         total = len(comments)
+
         cols = (
             "(name, author, body, created_utc, edited, ups, "
             "parent_id, submission_id, subreddit)"
         )
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
-        if overwrite:
-            conflict_clause = (
-                "ON CONFLICT (name) DO UPDATE SET "
-                "author=EXCLUDED.author, body=EXCLUDED.body, "
-                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
-                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
-                "submission_id=EXCLUDED.submission_id, "
-                "subreddit=EXCLUDED.subreddit RETURNING name;"
-            )
-        else:
-            conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
 
         with self.conn.cursor() as cur:
             cur.execute("SET search_path TO reddit;")
-            formatted_comments = list(map(self.format_comment, comments))
-            cur.executemany(
-                f"""
-                INSERT INTO comments {cols}
-                VALUES ({placeholders})
-                {conflict_clause}
+
+            cur.execute(
+                """
+                SELECT name, COALESCE(edited, FALSE), COALESCE(ups, 0)
+                FROM comments
+                WHERE submission_id = %s;
                 """,
-                formatted_comments,
+                ("t3_" + str(post_id),),
             )
-        console.print(f"Fetched {total} comments")
+            existing = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+
+            formatted_comments = list(map(self.format_comment, comments))
+
+            new_rows = []
+            changed_rows = []
+
+            for row in formatted_comments:
+                (
+                    name,
+                    author,
+                    body,
+                    created_utc,
+                    edited,
+                    ups,
+                    parent_id,
+                    submission_id,
+                    subreddit,
+                ) = row
+
+                # set defaults for comparison
+                prev = existing.get(name)
+                prev_edited = False
+                prev_ups = 0
+                if prev is not None:
+                    prev_edited, prev_ups = prev
+
+                if name not in existing:
+                    new_rows.append(row)
+                else:
+                    if overwrite:
+                        changed_rows.append(row)
+                    else:
+                        # update if edited changed from False to True,
+                        # or ups changed by >=5
+                        if bool(edited) and not bool(prev_edited):
+                            changed_rows.append(row)
+                        elif ups is not None and abs(ups - prev_ups) >= 5:
+                            changed_rows.append(row)
+
+            # insert new ones
+            if new_rows:
+                cur.executemany(
+                    f"""
+                    INSERT INTO comments {cols}
+                    VALUES ({placeholders})
+                    ON CONFLICT (name) DO NOTHING
+                    """,
+                    new_rows,
+                )
+
+            # update changed ones
+            if changed_rows:
+                # reorder params so name is last for WHERE clause
+                update_params = [
+                    (
+                        c[1],  # author
+                        c[2],  # body
+                        c[3],  # created_utc
+                        c[4],  # edited
+                        c[5],  # ups
+                        c[6],  # parent_id
+                        c[7],  # submission_id
+                        c[8],  # subreddit
+                        c[0],  # name
+                    )
+                    for c in changed_rows
+                ]
+                cur.executemany(
+                    """
+                    UPDATE comments
+                    SET author=%s, body=%s, created_utc=%s,
+                        edited=%s, ups=%s, parent_id=%s,
+                        submission_id=%s, subreddit=%s
+                    WHERE name=%s;
+                    """,
+                    update_params,
+                )
+
+        # commit if necessary
+        if not self.conn.autocommit:
+            self.conn.commit()
+        return (
+            len(new_rows),
+            len(changed_rows),
+            total - len(changed_rows) - len(new_rows),
+        )
 
     def scrape_entire_thread(
         self,
@@ -402,19 +478,23 @@ class Bot:
             def scrape_one(submission):
                 """Worker: scrape and insert all comments for one submission."""
                 try:
-                    self.scrape_comments_in_thread(submission.id, overwrite=overwrite)
-                    return submission.id, None
+                    new, updated, skipped = self.scrape_comments_in_thread(
+                        submission.id, overwrite=overwrite
+                    )
+                    return (new, updated, skipped, submission.id), None
                 except Exception as e:
                     return submission.id, str(e)
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {executor.submit(scrape_one, s): s.id for s in submissions}
                 for future in as_completed(futures):
-                    sid, err = future.result()
+                    info, err = future.result()
                     if err:
-                        console.print(f"[red]Error scraping {sid}: {err}[/red]")
+                        console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
                     else:
-                        console.print(f"[green]✔ {sid} done[/green]")
+                        console.print(
+                            f"[green]✔ {info[3]} done[/green] {info[0]} new, {info[1]} updated, {info[2]} skipped",
+                        )
 
         elapsed = time.perf_counter() - start_time
         console.print(f"Done in {elapsed:.2f}s.")
