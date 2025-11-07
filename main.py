@@ -471,6 +471,9 @@ class Bot:
 
         # threaded comment scraping
         if not subs_only:
+            total_new = 0
+            total_updated = 0
+            total_skipped = 0
             console.print(
                 f"Fetching comments for {len(submissions)} threads (max {max_workers} workers)..."
             )
@@ -495,9 +498,14 @@ class Bot:
                         console.print(
                             f"[green]✔ {info[3]} done[/green] {info[0]} new, {info[1]} updated, {info[2]} skipped",
                         )
+                        total_new += info[0]
+                        total_updated += info[1]
+                        total_skipped += info[2]
 
         elapsed = time.perf_counter() - start_time
-        console.print(f"Done in {elapsed:.2f}s.")
+        console.print(
+            f"\nDone in {elapsed:.2f}s. {total_new} new, {total_updated} updated, {total_skipped} skipped"
+        )
 
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
