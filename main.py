@@ -12,8 +12,6 @@ from prompt_toolkit.completion import NestedCompleter
 import psycopg
 from rich.console import Console
 import shlex
-import shutil
-import textwrap
 from typing import Any
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -706,12 +704,7 @@ def main():
                     "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>"
                     " [--overwrite|-o] [--limit N] [--threshold N] [--max-workers N]"
                 )
-                try:
-                    cols = get_app().output.get_size().columns
-                except Exception:
-                    cols = shutil.get_terminal_size().columns
-                parts = textwrap.wrap(base, width=max(20, cols - 10))
-                return HTML("<br/>".join(parts))
+                return HTML(base)
 
             target = tokens[1].lower()
             if target in ("thread", "t", "entire", "entire_thread"):
@@ -736,12 +729,7 @@ def main():
                     "comment or subreddit"
                 )
 
-            try:
-                cols = get_app().output.get_size().columns
-            except Exception:
-                cols = shutil.get_terminal_size().columns
-            wrapped = textwrap.wrap(s, width=max(20, cols - 10))
-            return HTML("<br/>".join(wrapped))
+            return HTML(s)
 
         if cmd == "delete":
             # quick help for delete command shown in bottom toolbar
@@ -750,12 +738,7 @@ def main():
                 "&lt;submissions|comments|all&gt;. "
                 "This prompts for confirmation."
             )
-            try:
-                cols = get_app().output.get_size().columns
-            except Exception:
-                cols = shutil.get_terminal_size().columns
-            wrapped = textwrap.wrap(s, width=max(20, cols - 10))
-            return HTML("<br/>".join(wrapped))
+            return HTML(s)
 
         if cmd == "db":
             return HTML("<b>db &lt;SQL&gt;</b>: run SQL against DB")
@@ -774,13 +757,6 @@ def main():
             # help command: `help` or `help <command>` or `help scrape <target>`
             if user_input.startswith("help"):
                 tokens = shlex.split(user_input)
-                try:
-                    cols = get_app().output.get_size().columns
-                except Exception:
-                    cols = shutil.get_terminal_size().columns
-
-                def wrapped_text(s: str) -> str:
-                    return "\n".join(textwrap.wrap(s, width=max(20, cols - 10)))
 
                 # Determine help target: `help scrape subreddit` -> ('scrape','subreddit')
                 if len(tokens) == 1:
@@ -795,7 +771,7 @@ def main():
                         "Use `help <command>` for more details, e.g. `help scrape` or "
                         "`help delete`."
                     )
-                    console.print(wrapped_text(s))
+                    console.print(s)
                     continue
 
                 # token 1 is either a top-level command or 'scrape'
@@ -845,7 +821,7 @@ def main():
                             "  --max-workers N, -w  - Concurrency for comment scraping.\n"
                             "  --skip-existing, -s  - Skip submissions already present in DB.\n"
                         )
-                    console.print(wrapped_text(s))
+                    console.print(s)
                     continue
 
                 # help for other top-level commands
@@ -859,12 +835,12 @@ def main():
                         "  all - delete rows from both tables.\n"
                         "This command will prompt for confirmation before deleting."
                     )
-                    console.print(wrapped_text(s))
+                    console.print(s)
                     continue
 
                 if t == "db":
                     s = "db <SQL>: Execute a SQL statement against the configured DB. Use carefully."
-                    console.print(wrapped_text(s))
+                    console.print(s)
                     continue
 
                 # fallback
