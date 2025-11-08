@@ -426,7 +426,6 @@ class Bot:
     ):
         start_time = time.perf_counter()
         sub = self.reddit.subreddit(subreddit_name)
-
         sorter = sort.lower()
         fetchers = {
             "new": sub.new,
@@ -436,12 +435,13 @@ class Bot:
             "controversial": sub.controversial,
         }
         iterator = fetchers.get(sorter, sub.new)(limit=limit)
-
-        submissions = list(iterator)
+        with console.status(
+            f"Fetching submissions from r/{subreddit_name}...", spinner="dots"
+        ):
+            submissions = list(iterator)
         if not submissions:
             console.print("No submissions found.")
             return
-
         skipped_count = 0
         if skip_existing:
             # filter out existing submissions
@@ -498,6 +498,7 @@ class Bot:
             total_updated = 0
             total_skipped = 0
             submissions_scraped = 0
+            total_errors = 0
             console.print(
                 f"Fetching comments for {len(submissions)} threads (max {max_workers} workers)..."
             )
@@ -544,6 +545,7 @@ class Bot:
                         self._subreddit_progress["current"] += 1
 
                         if err:
+                            total_errors += 1
                             console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
                         else:
                             console.print(
@@ -567,9 +569,10 @@ class Bot:
         ms = rem % 1000
         elapsed_str = f"[green]{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}[/green]"
         comment_summary = f" \nComments: [green]{total_new} new[/green], [yellow]{total_updated} updated[/yellow], [red]{total_skipped} skipped[/red]"
-
+        error_summary = f"{'[red]' if total_errors > 0 else '[white]'}{total_errors} errors{'[/red]' if total_errors > 0 else '[/white]'}"
+        # TODO change colour based on count as above
         console.print(
-            f"\nDone in {elapsed_str}."
+            f"\nDone in {elapsed_str}. with {error_summary}."
             f"\nSubmissions: [green]{submissions_scraped} scraped[/green], [red]{skipped_count} skipped[/red]."
             f"{comment_summary if submissions_scraped>0 else ''}",
             markup=True,
