@@ -5,6 +5,7 @@ import os
 import praw
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import NestedCompleter
@@ -765,7 +766,9 @@ def main():
     while True:
         try:
             user_input = session.prompt(
-                "scrapeddit> ", bottom_toolbar=bottom_toolbar
+                "scrapeddit> ",
+                bottom_toolbar=bottom_toolbar,
+                auto_suggest=AutoSuggestFromHistory(),
             ).strip()
             if not user_input:
                 continue
