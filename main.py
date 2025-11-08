@@ -704,7 +704,7 @@ def main():
             if len(tokens) == 1:
                 base = (
                     "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>"
-                    " [--overwrite|-o] [--limit N] [--threshold N]"
+                    " [--overwrite|-o] [--limit N] [--threshold N] [--max-workers N]"
                 )
                 try:
                     cols = get_app().output.get_size().columns
@@ -724,7 +724,7 @@ def main():
                     "subreddit: scrape many submissions "
                     "Flags: --sort (new|hot|top|rising|"
                     "controversial), --limit N (10), --subs-only, "
-                    "--overwrite/-o --skip-existing (submissions)/-s"
+                    "--max-workers N (-w), --overwrite/-o [--skip-existing|-s]"
                 )
             elif target in ("submission", "post", "s"):
                 s = "submission: scrape only submission. Flags: --overwrite/-o"
@@ -800,6 +800,7 @@ def main():
                 parser.add_argument("--subs-only", action="store_true")
                 parser.add_argument("--sort", type=str)
                 parser.add_argument("--threshold", type=int)
+                parser.add_argument("-w", "--max-workers", type=int)
                 parser.add_argument(
                     "-s", "--skip-existing", action="store_true", dest="skip_existing"
                 )
@@ -828,6 +829,11 @@ def main():
                 sort = ns.sort if ns.sort is not None else "new"
                 subs_only = bool(getattr(ns, "subs_only", False))
                 skip_existing = bool(getattr(ns, "skip_existing", False))
+                max_workers = (
+                    ns.max_workers
+                    if getattr(ns, "max_workers", None) is not None
+                    else 5
+                )
                 # support clear command: handled below
                 # thread synonyms
                 # TODO clear up limit handling here and above
@@ -870,6 +876,7 @@ def main():
                         limit=limit,
                         overwrite=overwrite,
                         subs_only=subs_only,
+                        max_workers=max_workers,
                         skip_existing=skip_existing,
                     )
                 else:
