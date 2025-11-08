@@ -21,6 +21,8 @@ console = Console()
 
 
 # TODO fix limit arg drilling and general mess regarding limit passing
+# TODO add flag to skip existing submissions when scraping subreddits
+# TODO add overall progress bar for subreddit scraping
 def load_auth_data_from_env() -> dict[str, str | None]:
     env_path = find_dotenv()
     if not env_path:
@@ -474,6 +476,7 @@ class Bot:
             total_new = 0
             total_updated = 0
             total_skipped = 0
+            submissions_scraped = 0
             console.print(
                 f"Fetching comments for {len(submissions)} threads (max {max_workers} workers)..."
             )
@@ -501,10 +504,20 @@ class Bot:
                         total_new += info[0]
                         total_updated += info[1]
                         total_skipped += info[2]
+                        submissions_scraped += 1
 
         elapsed = time.perf_counter() - start_time
+        total_ms = int(elapsed * 1000)
+        hh = total_ms // 3600000
+        rem = total_ms % 3600000
+        mm = rem // 60000
+        rem = rem % 60000
+        ss = rem // 1000
+        ms = rem % 1000
+        elapsed_str = f"[green]{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}[/green]"
         console.print(
-            f"\nDone in {elapsed:.2f}s. {total_new} new, {total_updated} updated, {total_skipped} skipped"
+            f"\nDone in {elapsed_str}. {submissions_scraped} submissions scraped, {total_new} new, {total_updated} updated, {total_skipped} skipped",
+            markup=True,
         )
 
     def db_execute(self, sql_str):
