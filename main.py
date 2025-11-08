@@ -422,6 +422,7 @@ class Bot:
         overwrite: bool = False,
         subs_only: bool = False,
         max_workers: int = 5,  # set to respect rate limits
+        skip_existing: bool = False,
     ):
         start_time = time.perf_counter()
         sub = self.reddit.subreddit(subreddit_name)
@@ -440,6 +441,25 @@ class Bot:
         if not submissions:
             console.print("No submissions found.")
             return
+
+        skipped_count = 0
+        if skip_existing:
+            # filter out existing submissions
+            with self.conn.cursor() as cur:
+                cur.execute("SET search_path TO reddit;")
+                cur.execute(
+                    """
+                    SELECT name FROM submissions
+                    WHERE name = ANY(%s);
+                    """,
+                    ([s.name for s in submissions],),
+                )
+                existing = {r[0] for r in cur.fetchall()}
+            before_count = len(submissions)
+            submissions = [s for s in submissions if s.name not in existing]
+            skipped_count = before_count - len(submissions)
+            if skipped_count > 0:
+                console.print(f"Skipped {skipped_count} existing submissions.")
 
         # formatted submissions batch
         formatted_rows = [
@@ -546,8 +566,12 @@ class Bot:
         ss = rem // 1000
         ms = rem % 1000
         elapsed_str = f"[green]{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}[/green]"
+        comment_summary = f" \nComments: [green]{total_new} new[/green], [yellow]{total_updated} updated[/yellow], [red]{total_skipped} skipped[/red]"
+
         console.print(
-            f"\nDone in {elapsed_str}. {submissions_scraped} submissions scraped, {total_new} new, {total_updated} updated, {total_skipped} skipped",
+            f"\nDone in {elapsed_str}."
+            f"\nSubmissions: [green]{submissions_scraped} scraped[/green], [red]{skipped_count} skipped[/red]."
+            f"{comment_summary if submissions_scraped>0 else ''}",
             markup=True,
         )
 
@@ -697,7 +721,7 @@ def main():
                     "subreddit: scrape many submissions "
                     "Flags: --sort (new|hot|top|rising|"
                     "controversial), --limit N (10), --subs-only, "
-                    "--overwrite/-o"
+                    "--overwrite/-o --skip-existing (submissions)/-s"
                 )
             elif target in ("submission", "post", "s"):
                 s = "submission: scrape only submission. Flags: --overwrite/-o"
@@ -753,7 +777,7 @@ def main():
                 if len(tokens) < 3:
                     print(
                         "Usage: scrape <target> <id_or_url> "
-                        "[--overwrite] [--limit N] [--threshold N]"
+                        "[--overwrite] [--limit N] [--threshold N] [--skip-existing|-s]"
                     )
                     continue
                 _, target = tokens[0], tokens[1]
@@ -771,6 +795,9 @@ def main():
                 parser.add_argument("--subs-only", action="store_true")
                 parser.add_argument("--sort", type=str)
                 parser.add_argument("--threshold", type=int)
+                parser.add_argument(
+                    "-s", "--skip-existing", action="store_true", dest="skip_existing"
+                )
                 try:
                     ns, unknown = parser.parse_known_args(flags)
                 except Exception as e:
@@ -795,6 +822,7 @@ def main():
                 threshold = ns.threshold if ns.threshold is not None else 0
                 sort = ns.sort if ns.sort is not None else "new"
                 subs_only = bool(getattr(ns, "subs_only", False))
+                skip_existing = bool(getattr(ns, "skip_existing", False))
                 # support clear command: handled below
                 # thread synonyms
                 # TODO clear up limit handling here and above
@@ -837,6 +865,7 @@ def main():
                         limit=limit,
                         overwrite=overwrite,
                         subs_only=subs_only,
+                        skip_existing=skip_existing,
                     )
                 else:
                     print("Unknown target; use thread, submission or comment.")
