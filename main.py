@@ -22,7 +22,6 @@ from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 console = Console()
 
 
-# TODO change name of clear command to be less ambiguous
 # TODO fix limit arg drilling and general mess regarding limit passing
 def load_auth_data_from_env() -> dict[str, str | None]:
     env_path = find_dotenv()
@@ -633,7 +632,7 @@ def main():
                 "c": None,
                 "r": None,
             },
-            "clear": {
+            "delete": {
                 "submissions": None,
                 "comments": None,
                 "all": None,
@@ -695,7 +694,7 @@ def main():
 
         if not tokens:
             return HTML(
-                "Commands: <b>scrape</b>, <b>db</b>, <b>clear</b>, " "<b>exit</b>"
+                "Commands: <b>scrape</b>, <b>db</b>, " "<b>delete</b>, <b>exit</b>"
             )
 
         cmd = tokens[0].lower()
@@ -744,10 +743,10 @@ def main():
             wrapped = textwrap.wrap(s, width=max(20, cols - 10))
             return HTML("<br/>".join(wrapped))
 
-        if cmd == "clear":
-            # TODO get rid of this mess
+        if cmd == "delete":
+            # quick help for delete command shown in bottom toolbar
             s = (
-                "clear: remove rows from tables. Usage: clear "
+                "delete: remove rows from tables. Usage: delete "
                 "&lt;submissions|comments|all&gt;. "
                 "This prompts for confirmation."
             )
@@ -787,11 +786,14 @@ def main():
                 if len(tokens) == 1:
                     s = (
                         "Commands:\n"
-                        "  scrape <target> <id_or_url> [flags] - scrape a thread/submission/comment/subreddit\n"
+                        "  scrape <target> <id_or_url> [flags] - "
+                        "scrape a thread/submission/comment/subreddit\n"
                         "  db <SQL> - run raw SQL against the DB\n"
-                        "  clear <submissions|comments|all> - delete rows from tables\n"
+                        "  delete <submissions|comments|all> - "
+                        "delete rows from tables\n"
                         "  exit/quit - leave the prompt\n\n"
-                        "Use `help <command>` for more details, e.g. `help scrape` or `help clear`."
+                        "Use `help <command>` for more details, e.g. `help scrape` or "
+                        "`help delete`."
                     )
                     console.print(wrapped_text(s))
                     continue
@@ -848,9 +850,10 @@ def main():
 
                 # help for other top-level commands
                 t = tokens[1].lower()
-                if t == "clear":
+                if t == "delete":
                     s = (
-                        "clear <submissions|comments|all>: Remove rows from the given tables.\n"
+                        "delete <submissions|comments|all>: Remove rows from the "
+                        "given tables.\n"
                         "  submissions - delete all submission rows.\n"
                         "  comments - delete all comment rows.\n"
                         "  all - delete rows from both tables.\n"
@@ -932,9 +935,9 @@ def main():
                     if getattr(ns, "max_workers", None) is not None
                     else 5
                 )
-                # support clear command: handled below
+                # support delete command: handled below
                 # thread synonyms
-                # TODO clear up limit handling here and above
+                # TODO: clean up limit handling here and above
                 if target in ("thread", "t", "entire", "entire_thread"):
                     if arg.startswith("http"):
                         bot.scrape_entire_thread(
@@ -979,11 +982,11 @@ def main():
                     )
                 else:
                     print("Unknown target; use thread, submission or comment.")
-            # clear command
-            elif user_input.startswith("clear ") or user_input == "clear":
+            # delete command
+            elif user_input.startswith("delete ") or user_input == "delete":
                 tokens = shlex.split(user_input)
                 if len(tokens) < 2:
-                    print("Usage: clear <submissions|comments|all>")
+                    print("Usage: delete <submissions|comments|all>")
                     continue
                 target = tokens[1].lower()
                 if target in ("subs", "submission", "submissions"):
@@ -993,7 +996,8 @@ def main():
                 elif target == "all":
                     target = "all"
                 else:
-                    print("Unknown clear target. Use submissions, " "comments or all.")
+                    print("Unknown delete target. Use submissions,")
+                    print("comments or all.")
                     continue
                 confirm = session.prompt(
                     "Type 'Yes' to confirm deletion (THIS CANNOT BE UNDONE): "
@@ -1002,9 +1006,7 @@ def main():
                     print("Aborted: confirmation not provided.")
                     continue
                 subs_del, comm_del = bot.clear_tables(target)
-                console.print(
-                    f"Cleared: submissions={subs_del}, " f"comments={comm_del}"
-                )
+                console.print(f"Deleted: submissions={subs_del}, comments={comm_del}")
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 bot.db_execute(sql_str)
