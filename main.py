@@ -16,6 +16,7 @@ import textwrap
 from typing import Any
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 
 console = Console()
 
@@ -482,29 +483,59 @@ class Bot:
             )
 
             def scrape_one(submission):
-                """Worker: scrape and insert all comments for one submission."""
+                """Worker: scrape and insert all comments for one submission.
+
+                Always return a tuple (info_tuple, err) where info_tuple is
+                (new, updated, skipped, submission_id).
+                """
                 try:
                     new, updated, skipped = self.scrape_comments_in_thread(
                         submission.id, overwrite=overwrite
                     )
                     return (new, updated, skipped, submission.id), None
                 except Exception as e:
-                    return submission.id, str(e)
+                    return (0, 0, 0, submission.id), str(e)
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(scrape_one, s): s.id for s in submissions}
-                for future in as_completed(futures):
-                    info, err = future.result()
-                    if err:
-                        console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
-                    else:
-                        console.print(
-                            f"[green]✔ {info[3]} done[/green] {info[0]} new, {info[1]} updated, {info[2]} skipped",
-                        )
-                        total_new += info[0]
-                        total_updated += info[1]
-                        total_skipped += info[2]
-                        submissions_scraped += 1
+            # progress state for toolbar
+            self._subreddit_progress = {
+                "enabled": True,
+                "current": 0,
+                "total": len(submissions),
+            }
+
+            # rich progress bar for main scraping loop
+            with Progress(
+                "Scraping threads...",
+                BarColumn(),
+                TextColumn("{task.completed}/{task.total}"),
+                TimeRemainingColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task("comments", total=len(submissions))
+
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {
+                        executor.submit(scrape_one, s): s.id for s in submissions
+                    }
+                    for future in as_completed(futures):
+                        info, err = future.result()
+                        # advance the rich progress bar and our shared state
+                        progress.advance(task)
+                        self._subreddit_progress["current"] += 1
+
+                        if err:
+                            console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
+                        else:
+                            console.print(
+                                f"[green]✔ {info[3]} done[/green] {info[0]} new, {info[1]} updated, {info[2]} skipped",
+                            )
+                            total_new += info[0]
+                            total_updated += info[1]
+                            total_skipped += info[2]
+                            submissions_scraped += 1
+
+            # disable the toolbar progress after scraping finishes
+            self._subreddit_progress["enabled"] = False
 
         elapsed = time.perf_counter() - start_time
         total_ms = int(elapsed * 1000)
@@ -618,6 +649,21 @@ def main():
             tokens = shlex.split(txt)
         except ValueError:
             tokens = txt.split()
+
+        # show subreddit scraping progress if active
+        try:
+            prog = getattr(bot, "_subreddit_progress", None)
+            if prog and prog.get("enabled") and prog.get("total", 0) > 0:
+                cur = int(prog.get("current", 0))
+                tot = int(prog.get("total", 0))
+                width = 30
+                filled = int((cur / tot) * width) if tot else 0
+                bar = "█" * filled + "─" * (width - filled)
+                perc = int((cur / tot) * 100) if tot else 0
+                return HTML(f"Scraping: {cur}/{tot} [{bar}] {perc}%")
+        except Exception:
+            # fail silently on any error
+            pass
 
         if not tokens:
             return HTML(
