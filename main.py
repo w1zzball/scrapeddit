@@ -22,9 +22,8 @@ from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 console = Console()
 
 
+# TODO change name of clear command to be less ambiguous
 # TODO fix limit arg drilling and general mess regarding limit passing
-# TODO add flag to skip existing submissions when scraping subreddits
-# TODO add overall progress bar for subreddit scraping
 def load_auth_data_from_env() -> dict[str, str | None]:
     env_path = find_dotenv()
     if not env_path:
