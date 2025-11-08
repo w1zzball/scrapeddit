@@ -638,6 +638,7 @@ def main():
                 "comments": None,
                 "all": None,
             },
+            "help": None,
             "db": None,
             "exit": None,
             "quit": None,
@@ -771,6 +772,103 @@ def main():
             ).strip()
             if not user_input:
                 continue
+            # help command: `help` or `help <command>` or `help scrape <target>`
+            if user_input.startswith("help"):
+                tokens = shlex.split(user_input)
+                try:
+                    cols = get_app().output.get_size().columns
+                except Exception:
+                    cols = shutil.get_terminal_size().columns
+
+                def wrapped_text(s: str) -> str:
+                    return "\n".join(textwrap.wrap(s, width=max(20, cols - 10)))
+
+                # Determine help target: `help scrape subreddit` -> ('scrape','subreddit')
+                if len(tokens) == 1:
+                    s = (
+                        "Commands:\n"
+                        "  scrape <target> <id_or_url> [flags] - scrape a thread/submission/comment/subreddit\n"
+                        "  db <SQL> - run raw SQL against the DB\n"
+                        "  clear <submissions|comments|all> - delete rows from tables\n"
+                        "  exit/quit - leave the prompt\n\n"
+                        "Use `help <command>` for more details, e.g. `help scrape` or `help clear`."
+                    )
+                    console.print(wrapped_text(s))
+                    continue
+
+                # token 1 is either a top-level command or 'scrape'
+                if tokens[1].lower() == "scrape":
+                    # help for scrape or a specific scrape target
+                    sub = tokens[2].lower() if len(tokens) > 2 else None
+                    if sub in ("subreddit", "r"):
+                        s = (
+                            "scrape subreddit <name> [flags]: Scrape many submissions from a subreddit.\n"
+                            "Flags:\n"
+                            "  --sort <new|hot|top|rising|controversial>  (default: new)\n"
+                            "  --limit N  (number of submissions to fetch; default 10)\n"
+                            "  --subs-only  (only insert submissions, skip comments)\n"
+                            "  --max-workers N, -w  (concurrency for comment scraping; default 5)\n"
+                            "  --overwrite, -o  (update existing rows on conflict)\n"
+                            "  --skip-existing, -s  (do not touch submissions already in DB)\n"
+                        )
+                    elif sub in ("thread", "t", "entire", "entire_thread"):
+                        s = (
+                            "scrape thread <id|url> [flags]: Scrape a submission and all its comments.\n"
+                            "Flags:\n"
+                            "  --limit N  (limit for fetching comments replace_more; None=all)\n"
+                            "  --threshold N  (replace_more threshold; default 0)\n"
+                            "  --overwrite, -o  (update existing rows on conflict)\n"
+                        )
+                    elif sub in ("submission", "post", "s"):
+                        s = (
+                            "scrape submission <id|url> [flags]: Scrape only the submission.\n"
+                            "Flags:\n"
+                            "  --overwrite, -o  (update existing rows on conflict)\n"
+                        )
+                    elif sub in ("comment", "c"):
+                        s = (
+                            "scrape comment <comment_id> [flags]: Scrape a single comment.\n"
+                            "Flags:\n"
+                            "  --overwrite, -o  (update existing rows on conflict)\n"
+                        )
+                    else:
+                        s = (
+                            "scrape <target> <id_or_url> [flags]\n"
+                            "Common flags for scrape targets:\n"
+                            "  --overwrite, -o  - Update existing rows on conflict.\n"
+                            "  --limit N  - Integer limit (use 'None' for unlimited).\n"
+                            "  --threshold N  - replace_more threshold when fetching comments.\n"
+                            "  --sort <sorter>  - For subreddits: new|hot|top|rising|controversial.\n"
+                            "  --subs-only  - For subreddits: skip comment scraping.\n"
+                            "  --max-workers N, -w  - Concurrency for comment scraping.\n"
+                            "  --skip-existing, -s  - Skip submissions already present in DB.\n"
+                        )
+                    console.print(wrapped_text(s))
+                    continue
+
+                # help for other top-level commands
+                t = tokens[1].lower()
+                if t == "clear":
+                    s = (
+                        "clear <submissions|comments|all>: Remove rows from the given tables.\n"
+                        "  submissions - delete all submission rows.\n"
+                        "  comments - delete all comment rows.\n"
+                        "  all - delete rows from both tables.\n"
+                        "This command will prompt for confirmation before deleting."
+                    )
+                    console.print(wrapped_text(s))
+                    continue
+
+                if t == "db":
+                    s = "db <SQL>: Execute a SQL statement against the configured DB. Use carefully."
+                    console.print(wrapped_text(s))
+                    continue
+
+                # fallback
+                console.print("No help available for that command.")
+                continue
+            # end of help command
+
             # Support commands:
             #   scrape thread <id|url>
             #   scrape submission <id|url>
