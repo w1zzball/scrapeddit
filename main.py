@@ -17,6 +17,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 
+
 console = Console()
 
 
@@ -879,6 +880,9 @@ def main():
                 parser.add_argument("--threshold", type=int)
                 parser.add_argument("-w", "--max-workers", type=int)
                 parser.add_argument(
+                    "--exit-after", action="store_true", dest="exit_after"
+                )
+                parser.add_argument(
                     "-s", "--skip-existing", action="store_true", dest="skip_existing"
                 )
                 try:
@@ -887,6 +891,7 @@ def main():
                     print("Error parsing flags:", e)
                     continue
                 overwrite = bool(ns.overwrite)
+                exit_after = bool(getattr(ns, "exit_after", False))
                 # limit arg may be 'None' or an integer
                 if ns.limit is None:
                     limit = None
@@ -922,6 +927,8 @@ def main():
                             threshold=threshold,
                             overwrite=overwrite,
                         )
+                    if exit_after:
+                        break
                     else:
                         bot.scrape_entire_thread(
                             post_id=arg,
@@ -929,6 +936,8 @@ def main():
                             threshold=threshold,
                             overwrite=overwrite,
                         )
+                    if exit_after:
+                        break
                 # submission synonyms
                 elif target in ("submission", "post", "s"):
                     if arg.startswith("http"):
@@ -936,14 +945,20 @@ def main():
                             post_url=arg,
                             overwrite=overwrite,
                         )
+                    if exit_after:
+                        break
                     else:
                         bot.scrape_submission(
                             post_id=arg,
                             overwrite=overwrite,
                         )
+                    if exit_after:
+                        break
                 # comment
                 elif target in ("comment", "c"):
                     bot.scrape_comment(arg, overwrite=overwrite)
+                    if exit_after:
+                        break
                 # subreddit (collection of submissions)
                 elif target in ("subreddit", "r"):
                     # arg should be subreddit name, e.g. 'python' or 'r/python'
@@ -956,6 +971,8 @@ def main():
                         max_workers=max_workers,
                         skip_existing=skip_existing,
                     )
+                    if exit_after:
+                        break
                 else:
                     print("Unknown target; use thread, submission or comment.")
             # delete command
