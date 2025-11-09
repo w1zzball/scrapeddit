@@ -16,7 +16,7 @@ from typing import Any
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
-
+import sys
 
 console = Console()
 
@@ -747,16 +747,21 @@ def main():
 
         return HTML("Unknown command. Try <b>scrape</b>, <b>db</b> or " "<b>exit</b>")
 
+    cli_input_executed = False
     while True:
         try:
-            user_input = session.prompt(
-                "scrapeddit> ",
-                bottom_toolbar=bottom_toolbar,
-                auto_suggest=AutoSuggestFromHistory(),
-            ).strip()
-            if not user_input:
-                continue
+            if len(sys.argv) < 2 or cli_input_executed:
+                user_input = session.prompt(
+                    "scrapeddit> ",
+                    bottom_toolbar=bottom_toolbar,
+                    auto_suggest=AutoSuggestFromHistory(),
+                ).strip()
+                if not user_input:
+                    continue
             # help command: `help` or `help <command>` or `help scrape <target>`
+            else:
+                user_input = " ".join(sys.argv[1:]).strip()
+                cli_input_executed = True
             if user_input.startswith("help"):
                 tokens = shlex.split(user_input)
 
