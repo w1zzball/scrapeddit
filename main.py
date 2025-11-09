@@ -21,6 +21,7 @@ from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 console = Console()
 
 
+# TODO add exit-after flag to readme
 # TODO fix limit arg drilling and general mess regarding limit passing
 def load_auth_data_from_env() -> dict[str, str | None]:
     env_path = find_dotenv()
