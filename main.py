@@ -621,7 +621,7 @@ class Bot:
 
 def main():
     auth_data = load_auth_data_from_env()
-    bot = Bot(**auth_data)
+    bot = Bot(**auth_data, database="top_subreddits")  # type: ignore
     # Autocompletion for top-level commands and scrape targets.
     completer = NestedCompleter.from_nested_dict(
         {
