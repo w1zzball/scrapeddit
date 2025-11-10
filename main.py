@@ -21,8 +21,6 @@ import sys
 console = Console()
 
 
-# TODO add exit-after flag to readme
-# TODO add CLI invocation to readme
 # TODO add threshold flag
 # TODO fix limit arg drilling and general mess regarding limit passing
 def load_auth_data_from_env() -> dict[str, str | None]:
