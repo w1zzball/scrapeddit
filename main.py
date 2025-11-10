@@ -56,6 +56,7 @@ class Bot:
         client_secret,
         user_agent,
         db_string,
+        database="reddit",
     ) -> None:
         # reddit API
         self.reddit = praw.Reddit(
@@ -68,6 +69,9 @@ class Bot:
         # db connection
         self.conn = psycopg.connect(db_string)
         self.conn.autocommit = True
+        # target schema
+        self.database = database
+        self.set_path_sql = psycopg.sql.SQL(f"SET search_path TO {self.database};")
         with self.conn.cursor() as cur:
             cur.execute("SELECT version();")
             db_version = cur.fetchone()
@@ -143,7 +147,7 @@ class Bot:
             conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
 
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
+            cur.execute(self.set_path_sql)
             cur.execute(
                 f"""
                 INSERT INTO submissions {cols}
@@ -196,7 +200,7 @@ class Bot:
             conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
 
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
+            cur.execute(self.set_path_sql)
             cur.execute(
                 f"""
                 INSERT INTO comments {cols}
@@ -290,7 +294,7 @@ class Bot:
         placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
 
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
+            cur.execute(self.set_path_sql)
 
             cur.execute(
                 """
@@ -445,7 +449,7 @@ class Bot:
         if skip_existing:
             # filter out existing submissions
             with self.conn.cursor() as cur:
-                cur.execute("SET search_path TO reddit;")
+                cur.execute(self.set_path_sql)
                 cur.execute(
                     """
                     SELECT name FROM submissions
@@ -485,7 +489,7 @@ class Bot:
         """
 
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
+            cur.execute(self.set_path_sql)
             cur.executemany(sql_stmt, formatted_rows)
         self.conn.commit()
 
@@ -580,7 +584,7 @@ class Bot:
     def db_execute(self, sql_str):
         with self.conn.cursor() as cur:
             try:
-                cur.execute("SET search_path TO reddit;")
+                cur.execute(self.set_path_sql)
                 cur.execute(sql_str)
                 # If the statement returned rows, fetch and print them.
                 # Otherwise print how many rows were affected.
@@ -605,7 +609,7 @@ class Bot:
         submissions_deleted = 0
         comments_deleted = 0
         with self.conn.cursor() as cur:
-            cur.execute("SET search_path TO reddit;")
+            cur.execute(self.set_path_sql)
             if target in ("comments", "all"):
                 cur.execute("DELETE FROM comments;")
                 comments_deleted = cur.rowcount
@@ -617,7 +621,7 @@ class Bot:
 
 def main():
     auth_data = load_auth_data_from_env()
-    bot = Bot(**auth_data)
+    bot = Bot(**auth_data, database="top_subreddits")  # type: ignore
     # Autocompletion for top-level commands and scrape targets.
     completer = NestedCompleter.from_nested_dict(
         {
