@@ -109,6 +109,22 @@ def main(*args, **kwargs):
             except subprocess.CalledProcessError as e:
                 print(f" Error scraping {sub}: {e}")
 
+        # append to scraped_subreddits.txt
+        file_path = Path("scraped_subreddits.txt")
+        try:
+            existing = set()
+            if file_path.exists():
+                existing = {
+                    line.strip()
+                    for line in file_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                }
+            if sub not in existing:
+                with file_path.open("a", encoding="utf-8") as f:
+                    f.write(sub + "\n")
+        except Exception as e:
+            print(f" Error writing scraped subreddit list: {e}")
+
         sleep(DELAY_BETWEEN)
 
 
