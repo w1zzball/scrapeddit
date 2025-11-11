@@ -33,16 +33,23 @@ def db_connection(schema: str | None = "test"):
         conn.close()
 
 
-def with_resources(func=None, *, schema: str | None = "test"):
-    "decorator for reddit and db connection — can be used as @with_resources or @with_resources()"
+def with_resources(use_db=True, use_reddit=True, *, schema: str | None = "test"):
+    """Decorator for optional reddit and db resources."""
 
     def decorator(f):
         def wrapper(*args, **kwargs):
-            with reddit_session() as reddit, db_connection(schema) as conn:
-                return f(reddit, conn, *args, **kwargs)
+            if use_reddit and use_db:
+                with reddit_session() as reddit, db_connection(schema) as conn:
+                    return f(reddit, conn, *args, **kwargs)
+            elif use_reddit:
+                with reddit_session() as reddit:
+                    return f(reddit, *args, **kwargs)
+            elif use_db:
+                with db_connection(schema) as conn:
+                    return f(conn, *args, **kwargs)
+            else:
+                return f(*args, **kwargs)
 
         return wrapper
 
-    if func is None:
-        return decorator
-    return decorator(func)
+    return decorator
