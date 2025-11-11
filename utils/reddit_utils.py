@@ -41,12 +41,15 @@ def get_comment(reddit, comment_id: str) -> Any:
     return comment
 
 
-def format_comment(comment: Any) -> Any:  # dict[str, str | int | float | bool]:
+def format_comment(comment: Any) -> tuple:
     formatted_comment = (
         getattr(comment, "name", None),
         format(getattr(comment, "author", None)),
         getattr(comment, "body", None),
-        datetime.fromtimestamp(getattr(comment, "created_utc", 0), tz=timezone.utc),
+        datetime.fromtimestamp(
+            getattr(comment, "created_utc", 0),
+            tz=timezone.utc,
+        ),
         bool(getattr(comment, "edited", None)),
         getattr(comment, "ups", None),
         getattr(comment, "parent_id", None),
@@ -58,3 +61,17 @@ def format_comment(comment: Any) -> Any:  # dict[str, str | int | float | bool]:
         getattr(comment, "subreddit_name_prefixed", None),
     )
     return formatted_comment
+
+
+def get_comments_in_thread(
+    post_id=None,
+    post_url=None,
+    limit: int | None = None,
+    threshold=0,
+) -> list[Any]:
+    """Get all comments in a thread, returns a CommentForest object."""
+    submission = get_submission(post_id, post_url)
+    comments = submission.comments
+    # with console.status("Fetching comments...", spinner="dots"):
+    comments.replace_more(limit=limit, threshold=threshold)
+    return comments.list()

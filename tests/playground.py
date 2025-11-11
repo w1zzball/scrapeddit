@@ -13,13 +13,17 @@ from scrapeddit.utils.scraping_utils import (
     get_comment,
     format_comment,
     scrape_comment,
+    scrape_comments_in_thread,
 )
 
 
 def main():
     # scrape_submission("1ok8gp0")
     # comment = get_comment("nm8tzft")
-    scrape_comment("nm8tzft", overwrite=True)
+    # scrape_comment("nm8tzft", overwrite=True)
+    scrape_comments_in_thread(
+        post_id="1ok8gp0",
+    )
     # print(format_comment(comment))
     # submission = get_submission("3g1jfi")
     # print(submission.title)
