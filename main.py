@@ -232,24 +232,6 @@ class Bot:
     def format_comment(
         self, comment: Any
     ) -> Any:  # dict[str, str | int | float | bool]:
-        # DICT return
-        # formatted_comment = {
-        #     "name": getattr(comment, "name", None),
-        #     "author": format(getattr(comment, "author", None)),
-        #     "body": getattr(comment, "body", None),
-        #     "created_utc": datetime.fromtimestamp(
-        #         getattr(comment, "created_utc", 0), tz=timezone.utc
-        #     ),
-        #     "edited": bool(getattr(comment, "edited", None)),
-        #     "ups": getattr(comment, "ups", None),
-        #     "parent_id": getattr(comment, "parent_id", None),
-        #     "submission_id": (
-        #         getattr(comment, "link_id", None)
-        #         or getattr(getattr(comment, "submission", None), "id", None)
-        #         or format(getattr(comment, "submission", None))
-        #     ),
-        #     "subreddit": getattr(comment, "subreddit_name_prefixed", None),
-        # }
         formatted_comment = (
             getattr(comment, "name", None),
             format(getattr(comment, "author", None)),
