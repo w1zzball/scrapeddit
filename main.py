@@ -18,8 +18,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 import sys
 
-console = Console()
-
 
 # TODO add threshold flag
 # TODO fix limit arg drilling and general mess regarding limit passing

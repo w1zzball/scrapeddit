@@ -21,9 +21,10 @@ def reddit_session():
 
 
 @contextmanager
-def db_connection(schema: str | None = "test"):
+def db_connection(schema: str | None = "test", auto_commit: bool = True):
     conn = psycopg.connect(
         os.getenv("DB_STRING"),
+        autocommit=auto_commit,
     )
     try:
         with conn.cursor() as cur:
