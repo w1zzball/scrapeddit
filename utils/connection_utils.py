@@ -5,6 +5,8 @@ import os
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
+load_dotenv()
+
 @contextmanager
 def reddit_session():
     reddit = praw.Reddit(
@@ -21,11 +23,13 @@ def reddit_session():
         del reddit
 
 @contextmanager
-def db_connection():
+def db_connection(schema: str | None = "test"):
     conn = psycopg.connect(
         db_string: os.getenv("DB_STRING"),
     )
     try:
+        with conn.cursor() as cur:
+            cur.execute(f'SET search_path TO {schema}')
         yield conn
     finally:
         conn.close()
@@ -39,3 +43,8 @@ def with_resources():
                 return func(reddit,conn,*args,**kwargs)
         return wrapper
     return decorator
+
+@with_resources
+def get_submission(reddit,conn,post_id):
+    cur = conn.cursor()
+    pass
