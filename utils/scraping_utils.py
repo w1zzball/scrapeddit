@@ -7,6 +7,9 @@ from .reddit_utils import (
     get_comments_in_thread,
 )
 from .connection_utils import with_resources
+import time
+from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # TODO factor out insertion into separate db_utils.py
@@ -262,3 +265,191 @@ def scrape_entire_thread(
             threshold=threshold,
             overwrite=overwrite,
         )
+
+
+@with_resources(use_reddit=True, use_db=True)
+def scrape_subreddit(
+    reddit,
+    conn,
+    subreddit_name: str,
+    sort: str = "new",
+    limit: int | None = 10,
+    overwrite: bool = False,
+    subs_only: bool = False,
+    max_workers: int = 5,  # set to respect rate limits
+    skip_existing: bool = False,
+):
+    start_time = time.perf_counter()
+    sub = reddit.subreddit(subreddit_name)
+    sorter = sort.lower()
+    fetchers = {
+        "new": sub.new,
+        "hot": sub.hot,
+        "top": sub.top,
+        "rising": sub.rising,
+        "controversial": sub.controversial,
+    }
+    iterator = fetchers.get(sorter, sub.new)(limit=limit)
+    with console.status(
+        f"Fetching submissions from r/{subreddit_name}...", spinner="dots"
+    ):
+        submissions = list(iterator)
+    if not submissions:
+        console.print("No submissions found.")
+        return
+    skipped_count = 0
+    if skip_existing:
+        # filter out existing submissions
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT name FROM submissions
+                WHERE name = ANY(%s);
+                """,
+                ([s.name for s in submissions],),
+            )
+            existing = {r[0] for r in cur.fetchall()}
+        before_count = len(submissions)
+        submissions = [s for s in submissions if s.name not in existing]
+        skipped_count = before_count - len(submissions)
+        if skipped_count > 0:
+            console.print(f"Skipped {skipped_count} existing submissions.")
+
+    # formatted submissions batch
+    formatted_rows = [tuple(format_submission(s).values()) for s in submissions]
+    cols = [
+        "name",
+        "author",
+        "title",
+        "selftext",
+        "url",
+        "created_utc",
+        "edited",
+        "ups",
+        "subreddit",
+        "permalink",
+    ]
+    placeholders = ", ".join(["%s"] * len(cols))
+
+    if not overwrite:
+        conflict_clause = "ON CONFLICT (name) DO NOTHING"
+    else:
+        conflict_clause = (
+            "ON CONFLICT (name) DO UPDATE SET "
+            "author=EXCLUDED.author, title=EXCLUDED.title"
+        )
+
+    # build SQL statement in smaller parts to avoid long lines
+    columns_str = ", ".join(cols)
+    sql_stmt = (
+        "INSERT INTO submissions (" + columns_str + ")\n"
+        "VALUES (" + placeholders + ")\n" + conflict_clause
+    )
+
+    with conn.cursor() as cur:
+        cur.executemany(sql_stmt, formatted_rows)
+    conn.commit()
+
+    console.print(f"Inserted {len(submissions)} submissions.")
+
+    # threaded comment scraping
+    if not subs_only:
+        total_new = 0
+        total_updated = 0
+        total_skipped = 0
+        submissions_scraped = 0
+        total_errors = 0
+        console.print(
+            "Fetching comments for "
+            f"{len(submissions)} threads (max {max_workers} workers)..."
+        )
+
+        def scrape_one(submission):
+            """Worker: scrape and insert all comments for one submission.
+
+            Always return a tuple (info_tuple, err) where info_tuple is
+            (new, updated, skipped, submission_id).
+            """
+            try:
+                new, updated, skipped = scrape_comments_in_thread(
+                    submission.id, overwrite=overwrite
+                )
+                return (new, updated, skipped, submission.id), None
+            except Exception as e:
+                return (0, 0, 0, submission.id), str(e)
+
+        # progress state for toolbar
+        _subreddit_progress = {
+            "enabled": True,
+            "current": 0,
+            "total": len(submissions),
+        }
+
+        # rich progress bar for main scraping loop
+        with Progress(
+            "Scraping threads...",
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("comments", total=len(submissions))
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(scrape_one, s): s.id for s in submissions}
+                for future in as_completed(futures):
+                    info, err = future.result()
+                    # advance the rich progress bar and our shared state
+                    progress.advance(task)
+                    _subreddit_progress["current"] += 1
+
+                    if err:
+                        total_errors += 1
+                        console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
+                    else:
+                        console.print(
+                            f"[green]✔ {info[3]} done[/green] "
+                            f"{info[0]} new, {info[1]} updated, {info[2]} skipped"
+                        )
+                        total_new += info[0]
+                        total_updated += info[1]
+                        total_skipped += info[2]
+                        submissions_scraped += 1
+
+        # disable the toolbar progress after scraping finishes
+        _subreddit_progress["enabled"] = False
+
+    elapsed = time.perf_counter() - start_time
+    total_ms = int(elapsed * 1000)
+    hh = total_ms // 3600000
+    rem = total_ms % 3600000
+    mm = rem // 60000
+    rem = rem % 60000
+    ss = rem // 1000
+    ms = rem % 1000
+    elapsed_str = f"[green]{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}[/green]"
+
+    comment_summary = (
+        " \nComments: "
+        f"[green]{total_new} new[/green], "
+        f"[yellow]{total_updated} updated[/yellow], "
+        f"[red]{total_skipped} skipped[/red]"
+    )
+
+    if total_errors > 0:
+        error_summary = f"[red]{total_errors} errors[/red]"
+    else:
+        error_summary = f"[white]{total_errors} errors[/white]"
+
+    # print final summary in smaller concatenated pieces
+    console.print(
+        "\nDone in "
+        + elapsed_str
+        + ". with "
+        + error_summary
+        + "\nSubmissions: "
+        + f"[green]{submissions_scraped} scraped[/green], "
+        + f"[red]{skipped_count} skipped[/red]."
+        + (comment_summary if submissions_scraped > 0 else ""),
+        markup=True,
+    )
