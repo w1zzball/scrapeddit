@@ -53,8 +53,29 @@ def main(*args, **kwargs):
     if args.file:
         file_path = Path(args.file)
         if file_path.exists():
-            with file_path.open() as f:
-                subreddits.extend([line.strip() for line in f if line.strip()])
+            # read subs from the supplied file
+            file_subs = [
+                line.strip()
+                for line in file_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            # if scraped_subreddits.txt exists, skip any subs already recorded there
+            scraped_file = Path("scraped_subreddits.txt")
+            if scraped_file.exists():
+                already_scraped = {
+                    line.strip()
+                    for line in scraped_file.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                }
+                filtered = [s for s in file_subs if s not in already_scraped]
+                skipped = [s for s in file_subs if s in already_scraped]
+                if skipped:
+                    print(
+                        f"Skipping {len(skipped)} already-scraped subreddits from {args.file}: {', '.join(sorted(skipped))}"
+                    )
+                subreddits.extend(filtered)
+            else:
+                subreddits.extend(file_subs)
         else:
             print(f"File {args.file} does not exist.")
 

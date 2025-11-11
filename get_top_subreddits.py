@@ -26,12 +26,12 @@ def load_auth_data_from_env() -> dict[str, str | None]:
 reddit = praw.Reddit(**load_auth_data_from_env())
 
 subs = []
-for subreddit in reddit.subreddits.popular(limit=1000):
+for subreddit in reddit.subreddits.popular(limit=100):
     subs.append((subreddit.display_name, subreddit.subscribers))
 
 # sort by number of subscribers, descending
 # subs.sort(key=lambda x: x[1], reverse=True)
-subs.sort(key=lambda x: x[1], reverse=False)
+subs.sort(key=lambda x: x[1], reverse=True)
 
 subnames = [sub[0] for sub in subs]
 
