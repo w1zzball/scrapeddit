@@ -1,50 +1,48 @@
-from re import L
 import praw
 import psycopg
 import os
 from contextlib import contextmanager
-from dotenv import load_dotenv
 
-load_dotenv()
 
 @contextmanager
 def reddit_session():
     reddit = praw.Reddit(
-        username= os.getenv("USERNAME"),
-        password= os.getenv("PASSWORD"),
-        client_id= os.getenv("CLIENT_ID"),
+        username=os.getenv("USERNAME"),
+        password=os.getenv("PASSWORD"),
+        client_id=os.getenv("CLIENT_ID"),
         # REDIRECT_URI = os.getenv("REDIRECT_URI")
-        client_secret= os.getenv("SECRET_KEY"),
-        user_agent= os.getenv("USER_AGENT"),
-        )
+        client_secret=os.getenv("SECRET_KEY"),
+        user_agent=os.getenv("USER_AGENT"),
+    )
     try:
         yield reddit
     finally:
         del reddit
 
+
 @contextmanager
 def db_connection(schema: str | None = "test"):
     conn = psycopg.connect(
-        db_string: os.getenv("DB_STRING"),
+        os.getenv("DB_STRING"),
     )
     try:
         with conn.cursor() as cur:
-            cur.execute(f'SET search_path TO {schema}')
+            cur.execute(f"SET search_path TO {schema}")
         yield conn
     finally:
         conn.close()
 
 
-def with_resources():
-    "decorator for reddit and bd connection"
-    def decorator(func):
-        def wrapper(*args,**kwargs):
-            with reddit_session() as reddit, db_connection() as conn:
-                return func(reddit,conn,*args,**kwargs)
-        return wrapper
-    return decorator
+def with_resources(func=None, *, schema: str | None = "test"):
+    "decorator for reddit and db connection — can be used as @with_resources or @with_resources()"
 
-@with_resources
-def get_submission(reddit,conn,post_id):
-    cur = conn.cursor()
-    pass
+    def decorator(f):
+        def wrapper(*args, **kwargs):
+            with reddit_session() as reddit, db_connection(schema) as conn:
+                return f(reddit, conn, *args, **kwargs)
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    return decorator(func)

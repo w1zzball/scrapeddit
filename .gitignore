@@ -1,2 +1,5 @@
 .env
 .scrapeddit_history
+__pycache__/
+*.pyc
+helper_logs/
