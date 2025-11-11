@@ -30,3 +30,31 @@ def get_submission(reddit, post_id=None, post_url=None):
     else:
         raise ValueError("Either post_id or post_url must be provided.")
     return submission
+
+
+@with_resources(use_reddit=True, use_db=False)
+def get_comment(reddit, comment_id: str) -> Any:
+    """
+    Get a single comment by its ID.
+    """
+    comment = reddit.comment(comment_id)
+    return comment
+
+
+def format_comment(comment: Any) -> Any:  # dict[str, str | int | float | bool]:
+    formatted_comment = (
+        getattr(comment, "name", None),
+        format(getattr(comment, "author", None)),
+        getattr(comment, "body", None),
+        datetime.fromtimestamp(getattr(comment, "created_utc", 0), tz=timezone.utc),
+        bool(getattr(comment, "edited", None)),
+        getattr(comment, "ups", None),
+        getattr(comment, "parent_id", None),
+        (
+            getattr(comment, "link_id", None)
+            or getattr(getattr(comment, "submission", None), "id", None)
+            or format(getattr(comment, "submission", None))
+        ),
+        getattr(comment, "subreddit_name_prefixed", None),
+    )
+    return formatted_comment
