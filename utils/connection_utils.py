@@ -2,10 +2,11 @@ import praw
 import psycopg
 import os
 from contextlib import contextmanager
+from typing import Generator, Callable, Any, TypeVar
 
 
 @contextmanager
-def reddit_session():
+def reddit_session() -> Generator[praw.Reddit, None, None]:
     reddit = praw.Reddit(
         username=os.getenv("USERNAME"),
         password=os.getenv("PASSWORD"),
@@ -21,7 +22,9 @@ def reddit_session():
 
 
 @contextmanager
-def db_connection(schema: str | None = "test", auto_commit: bool = True):
+def db_connection(
+    schema: str | None = "test", auto_commit: bool = True
+) -> Generator[psycopg.Connection, None, None]:
     conn = psycopg.connect(
         os.getenv("DB_STRING"),
         autocommit=auto_commit,
@@ -34,11 +37,15 @@ def db_connection(schema: str | None = "test", auto_commit: bool = True):
         conn.close()
 
 
-def with_resources(use_db=True, use_reddit=True, *, schema: str | None = "test"):
+def with_resources(
+    use_db: bool = True, use_reddit: bool = True, *, schema: str | None = "test"
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator for optional reddit and db resources."""
 
-    def decorator(f):
-        def wrapper(*args, **kwargs):
+    T = TypeVar("T", bound=Callable[..., Any])
+
+    def decorator(f: T) -> T:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             if use_reddit and use_db:
                 with reddit_session() as reddit, db_connection(schema) as conn:
                     return f(reddit, conn, *args, **kwargs)
@@ -51,6 +58,6 @@ def with_resources(use_db=True, use_reddit=True, *, schema: str | None = "test")
             else:
                 return f(*args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator
