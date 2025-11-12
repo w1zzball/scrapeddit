@@ -459,6 +459,7 @@ def scrape_subreddit(
     )
 
 
+# TODO stop duplicate redditor scraping
 @with_resources(use_reddit=False, use_db=True)
 def scrape_redditor(
     conn, user_id, limit: int = 100, overwrite: bool = False, sort: str = "new"
@@ -466,7 +467,12 @@ def scrape_redditor(
     """
     Given a redditor, scrape the last n (default: 100) comments they made
     """
-    comments = get_redditors_comments(user_id, limit, sort=sort)
+    print(f"Scraping comments for u/{user_id}...")
+    try:
+        comments = get_redditors_comments(user_id, limit, sort=sort)
+    except Exception as e:
+        console.print(f"[red]Error scraping u/{user_id}: {e}[/red]")
+        return
     formatted_rows = [format_comment(c) for c in comments]
     # TODO factor out common insertion code as it is used multiple times
     with conn.cursor() as cur:
@@ -502,7 +508,11 @@ def scrape_redditors(
     Given a list of redditors, scrape the last n comments they made
     """
     for redditor in redditors:
-        scrape_redditor(redditor, limit=limit, overwrite=overwrite, sort=sort)
+        try:
+            console.print(f"Scraping redditor: u/{redditor}")
+            scrape_redditor(redditor, limit=limit, overwrite=overwrite, sort=sort)
+        except Exception as e:
+            console.print(f"[red]Error scraping u/{redditor}: {e}[/red]")
 
 
 @with_resources(use_reddit=False, use_db=True)
@@ -512,8 +522,9 @@ def recursively_scrape_redditors_for_subreddit(
     comment_limit: int = 100,
     redditor_limit: int = 100,
     overwrite: bool = False,
-    sort: str = "new",
+    sort: str = "top",
     depth: int = 2,
+    scraped_redditors: list[str] = [],
 ):
     """
     Given a subreddit, fetch all redditors with comments on that subreddit from database,
@@ -521,22 +532,26 @@ def recursively_scrape_redditors_for_subreddit(
     """
 
     redditors = get_redditors_from_subreddit(subreddit, limit=redditor_limit)
+    redditors = [r for r in redditors if r not in scraped_redditors]
     print("got redittors")
     console.print(f"Found {len(redditors)} redditors in r/{subreddit}.")
     scrape_redditors(redditors, limit=comment_limit, overwrite=overwrite, sort=sort)
+    scraped_redditors.extend(redditors)
+    if depth == 0:
+        return
     # look up redditors comments and get subreddits
     with conn.cursor() as cur:
         cur.execute(
             "SELECT DISTINCT subreddit FROM comments WHERE author = ANY(%s)",
             (list(redditors),),
         )
-        subreddits = [row[0].replace("r/", "") for row in cur.fetchall()]
-        print(subreddits[0])
+        subreddits = [
+            row[0].replace("r/", "") for row in cur.fetchall() if row[0] is not None
+        ]
     console.print(f"Found {len(subreddits)} subreddits from redditors' comments.")
     for sub in subreddits:
         console.print(f"Recursing into subreddit: r/{sub} (depth {depth-1})")
-        if depth == 0:
-            return
+
         recursively_scrape_redditors_for_subreddit(
             subreddit=sub,
             comment_limit=comment_limit,

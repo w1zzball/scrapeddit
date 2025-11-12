@@ -30,7 +30,7 @@ def main():
     # print(redditors)
     # scrape_redditor("bubblebotz", sort="top", limit=10)
     recursively_scrape_redditors_for_subreddit(
-        "cats", redditor_limit=20, comment_limit=20, depth=2
+        "gaming", redditor_limit=100, comment_limit=100, depth=5
     )
     # redditors = get_redditors_from_subreddit("cats")
     # print(redditors)
