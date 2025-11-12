@@ -1,4 +1,4 @@
-from .io_utils import console
+from .console import console
 from .reddit_utils import (
     get_submission,
     format_submission,
@@ -10,6 +10,7 @@ from .connection_utils import with_resources
 import time
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from .state import subreddit_progress
 
 
 # TODO factor out insertion into separate db_utils.py
@@ -379,11 +380,13 @@ def scrape_subreddit(
                 return (0, 0, 0, submission.id), str(e)
 
         # progress state for toolbar
-        _subreddit_progress = {
-            "enabled": True,
-            "current": 0,
-            "total": len(submissions),
-        }
+        subreddit_progress.update(
+            {
+                "enabled": True,
+                "current": 0,
+                "total": len(submissions),
+            }
+        )
 
         # rich progress bar for main scraping loop
         with Progress(
@@ -401,7 +404,7 @@ def scrape_subreddit(
                     info, err = future.result()
                     # advance the rich progress bar and our shared state
                     progress.advance(task)
-                    _subreddit_progress["current"] += 1
+                    subreddit_progress["current"] += 1
 
                     if err:
                         total_errors += 1
@@ -417,7 +420,7 @@ def scrape_subreddit(
                         submissions_scraped += 1
 
         # disable the toolbar progress after scraping finishes
-        _subreddit_progress["enabled"] = False
+        subreddit_progress["enabled"] = False
 
     elapsed = time.perf_counter() - start_time
     total_ms = int(elapsed * 1000)

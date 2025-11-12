@@ -1,4 +1,4 @@
-from io_utils import console
+from .console import console
 from .connection_utils import with_resources
 
 
