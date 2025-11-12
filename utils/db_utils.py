@@ -1,6 +1,10 @@
 from .console import console
 from .connection_utils import with_resources
 
+"""
+    Utils for purely database operations
+"""
+
 
 @with_resources(use_db=True, use_reddit=False)
 def db_execute(conn, sql_str):
@@ -39,3 +43,22 @@ def clear_tables(conn, target: str = "all") -> tuple[int, int]:
             cur.execute("DELETE FROM submissions;")
             submissions_deleted = cur.rowcount
     return submissions_deleted, comments_deleted
+
+
+@with_resources(use_db=True, use_reddit=False)
+def db_get_redditors_from_subreddit(
+    conn, subreddit: str, limit: int = 100
+) -> list[str]:
+    """Given a subreddit fetch all redditors with comments on that subreddit"""
+    subreddit_name = subreddit if subreddit.startswith("r/") else "r/" + subreddit
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+                    SELECT author FROM comments
+                    WHERE subreddit = '{subreddit_name}'
+                    LIMIT {limit};
+        """
+        )
+        res = cur.fetchall()
+    redditors = [row[0] for row in res]
+    return redditors

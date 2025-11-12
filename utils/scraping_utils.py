@@ -5,6 +5,7 @@ from .reddit_utils import (
     get_comment,
     format_comment,
     get_comments_in_thread,
+    get_redditors_comments,
 )
 from .connection_utils import with_resources
 import time
@@ -454,3 +455,45 @@ def scrape_subreddit(
         + (comment_summary if submissions_scraped > 0 else ""),
         markup=True,
     )
+
+
+@with_resources(use_reddit=False, use_db=True)
+def scrape_redditor(
+    conn, user_id, limit: int = 100, overwrite: bool = False, sort: str = "new"
+):
+    """
+    Given a redditor, scrape the last n (default: 100) comments they made
+    """
+    comments = get_redditors_comments(user_id, limit, sort=sort)
+    formatted_rows = [format_comment(c) for c in comments]
+    # TODO factor out common insertion code as it is used multiple times
+    with conn.cursor() as cur:
+        cols = (
+            "(name, author, body, created_utc, edited, ups, "
+            "parent_id, submission_id, subreddit)"
+        )
+        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
+        if overwrite:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, body=EXCLUDED.body, "
+                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
+                "submission_id=EXCLUDED.submission_id, "
+                "subreddit=EXCLUDED.subreddit"
+            )
+        else:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING"
+
+        sql_stmt = (
+            "INSERT INTO comments " + cols + "\n"
+            "VALUES (" + placeholders + ")\n" + conflict_clause
+        )
+        cur.executemany(sql_stmt, formatted_rows)
+    console.print(f"Inserted {len(formatted_rows)} comments for u/{user_id}.")
+
+
+def trace_redditors(redditors):
+    """
+    Given a list of redditors, scrape the last n comments they made
+    """

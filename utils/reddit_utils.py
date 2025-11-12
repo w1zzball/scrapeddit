@@ -78,9 +78,16 @@ def get_comments_in_thread(
 
 
 @with_resources(use_reddit=True, use_db=False)
-def get_redditors_comments(reddit, user_id: str, limit: int) -> list[Any]:
+def get_redditors_comments(
+    reddit, user_id: str, limit: int = 100, sort: str = "new"
+) -> list[Any]:
     """
     Get all comments made by a specific user.
     """
     redditor = reddit.redditor(user_id)
-    return redditor.comments.new(limit=limit)
+    if sort == "new":
+        return redditor.comments.new(limit=limit)
+    elif sort == "top":
+        return redditor.comments.top(limit=limit)
+    else:
+        raise ValueError(f"Unknown sort order: {sort}")
