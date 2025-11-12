@@ -75,3 +75,12 @@ def get_comments_in_thread(
     # with console.status("Fetching comments...", spinner="dots"):
     comments.replace_more(limit=limit, threshold=threshold)
     return comments.list()
+
+
+@with_resources(use_reddit=True, use_db=False)
+def get_redditors_comments(reddit, user_id: str, limit: int) -> list[Any]:
+    """
+    Get all comments made by a specific user.
+    """
+    redditor = reddit.redditor(user_id)
+    return redditor.comments.new(limit=limit)
