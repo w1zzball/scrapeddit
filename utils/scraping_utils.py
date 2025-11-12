@@ -251,7 +251,6 @@ def scrape_entire_thread(
 ):
     with console.status("Scraping submission...", spinner="dots"):
         scrape_submission(
-            conn,
             post_id=post_id,
             post_url=post_url,
             overwrite=overwrite,
@@ -260,7 +259,6 @@ def scrape_entire_thread(
         )
     with console.status("Scraping comments...", spinner="dots"):
         scrape_comments_in_thread(
-            conn,
             post_id=post_id,
             post_url=post_url,
             threshold=threshold,
