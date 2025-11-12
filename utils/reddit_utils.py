@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 from .connection_utils import with_resources
+from .console import console
 
 
 def format_submission(submission: Any) -> dict[str, str | int | float | bool]:
@@ -91,3 +92,26 @@ def get_redditors_comments(
         return redditor.comments.top(limit=limit)
     else:
         raise ValueError(f"Unknown sort order: {sort}")
+
+
+@with_resources(use_db=False, use_reddit=True)
+def get_redditors_from_subreddit(
+    reddit, subreddit_name: str, limit: int = 100, sort: str = "new"
+) -> list[str]:
+    """Given a subreddit fetch redditors with comments on that subreddit"""
+    sub = reddit.subreddit(subreddit_name)
+    sorter = sort.lower()
+    fetchers = {
+        "new": sub.new,
+        "hot": sub.hot,
+        "top": sub.top,
+        "rising": sub.rising,
+        "controversial": sub.controversial,
+    }
+    iterator = fetchers.get(sorter, sub.new)(limit=limit)
+    submissions = list(iterator)
+    if not submissions:
+        console.print("No submissions found.")
+        return []
+    redditors = [format_submission(s)["author"] for s in submissions]
+    return redditors

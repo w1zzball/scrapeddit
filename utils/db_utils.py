@@ -54,7 +54,7 @@ def db_get_redditors_from_subreddit(
     with conn.cursor() as cur:
         cur.execute(
             f"""
-                    SELECT author FROM comments
+                    SELECT DISTINCT author FROM comments
                     WHERE subreddit = '{subreddit_name}'
                     LIMIT {limit};
         """

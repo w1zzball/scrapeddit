@@ -1,3 +1,4 @@
+from .db_utils import db_get_redditors_from_subreddit
 from .console import console
 from .reddit_utils import (
     get_submission,
@@ -6,6 +7,7 @@ from .reddit_utils import (
     format_comment,
     get_comments_in_thread,
     get_redditors_comments,
+    get_redditors_from_subreddit,
 )
 from .connection_utils import with_resources
 import time
@@ -493,7 +495,53 @@ def scrape_redditor(
     console.print(f"Inserted {len(formatted_rows)} comments for u/{user_id}.")
 
 
-def trace_redditors(redditors):
+def scrape_redditors(
+    redditors, limit: int = 100, overwrite: bool = False, sort: str = "new"
+):
     """
     Given a list of redditors, scrape the last n comments they made
     """
+    for redditor in redditors:
+        scrape_redditor(redditor, limit=limit, overwrite=overwrite, sort=sort)
+
+
+@with_resources(use_reddit=False, use_db=True)
+def recursively_scrape_redditors_for_subreddit(
+    conn,
+    subreddit,
+    comment_limit: int = 100,
+    redditor_limit: int = 100,
+    overwrite: bool = False,
+    sort: str = "new",
+    depth: int = 2,
+):
+    """
+    Given a subreddit, fetch all redditors with comments on that subreddit from database,
+    then scrape their comments, for each subreddit found in those comments, repeat
+    """
+
+    redditors = get_redditors_from_subreddit(subreddit, limit=redditor_limit)
+    print("got redittors")
+    console.print(f"Found {len(redditors)} redditors in r/{subreddit}.")
+    scrape_redditors(redditors, limit=comment_limit, overwrite=overwrite, sort=sort)
+    # look up redditors comments and get subreddits
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT DISTINCT subreddit FROM comments WHERE author = ANY(%s)",
+            (list(redditors),),
+        )
+        subreddits = [row[0].replace("r/", "") for row in cur.fetchall()]
+        print(subreddits[0])
+    console.print(f"Found {len(subreddits)} subreddits from redditors' comments.")
+    for sub in subreddits:
+        console.print(f"Recursing into subreddit: r/{sub} (depth {depth-1})")
+        if depth == 0:
+            return
+        recursively_scrape_redditors_for_subreddit(
+            subreddit=sub,
+            comment_limit=comment_limit,
+            redditor_limit=redditor_limit,
+            overwrite=overwrite,
+            sort=sort,
+            depth=depth - 1,
+        )
