@@ -22,11 +22,9 @@ from .prompt_help_text import prompt_data
 # pylint: disable=locally-disabled, line-too-long
 
 
-# TODO factor out help strings
 # TODO add unit tests for prompt loop (mocking input/output)
 # TODO add scrape redditor command
 # TODO add recursive subreddit scraper command
-# TODO remove help command and just use bottom toolbar
 def prompt_loop():
     """Interactive prompt loop for scrapeddit CLI."""
     # Autocompletion for top-level commands and scrape targets.
@@ -48,7 +46,6 @@ def prompt_loop():
                 "comments": None,
                 "all": None,
             },
-            "help": None,
             "db": None,
             "exit": None,
             "quit": None,
@@ -155,102 +152,12 @@ def prompt_loop():
                 ).strip()
                 if not user_input:
                     continue
-            # help command: `help` or `help <command>` or `help scrape <target>`
             else:
+                # CLI invocation
                 user_input = " ".join(sys.argv[1:]).strip()
                 cli_input_executed = True
-            if user_input.startswith("help"):
-                tokens = shlex.split(user_input)
-
-                # Determine help target: `help scrape subreddit` -> ('scrape','subreddit')
-                if len(tokens) == 1:
-                    s = (
-                        "Commands:\n"
-                        "  scrape <target> <id_or_url> [flags] - "
-                        "scrape a thread/submission/comment/subreddit\n"
-                        "  db <SQL> - run raw SQL against the DB\n"
-                        "  delete <submissions|comments|all> - "
-                        "delete rows from tables\n"
-                        "  exit/quit - leave the prompt\n\n"
-                        "Use `help <command>` for more details, e.g. `help scrape` or "
-                        "`help delete`."
-                    )
-                    console.print(s)
+                if not user_input:
                     continue
-
-                # token 1 is either a top-level command or 'scrape'
-                if tokens[1].lower() == "scrape":
-                    # help for scrape or a specific scrape target
-                    sub = tokens[2].lower() if len(tokens) > 2 else None
-                    if sub in ("subreddit", "r"):
-                        s = (
-                            "scrape subreddit <name> [flags]: Scrape many submissions from a subreddit.\n"
-                            "Flags:\n"
-                            "  --sort <new|hot|top|rising|controversial>  (default: new)\n"
-                            "  --limit N  (number of submissions to fetch; default 10)\n"
-                            "  --subs-only  (only insert submissions, skip comments)\n"
-                            "  --max-workers N, -w  (concurrency for comment scraping; default 5)\n"
-                            "  --overwrite, -o  (update existing rows on conflict)\n"
-                            "  --skip-existing, -s  (do not touch submissions already in DB)\n"
-                        )
-                    elif sub in ("thread", "t", "entire", "entire_thread"):
-                        s = (
-                            "scrape thread <id|url> [flags]: Scrape a submission and all its comments.\n"
-                            "Flags:\n"
-                            "  --limit N  (limit for fetching comments replace_more; None=all)\n"
-                            "  --threshold N  (replace_more threshold; default 0)\n"
-                            "  --overwrite, -o  (update existing rows on conflict)\n"
-                        )
-                    elif sub in ("submission", "post", "s"):
-                        s = (
-                            "scrape submission <id|url> [flags]: Scrape only the submission.\n"
-                            "Flags:\n"
-                            "  --overwrite, -o  (update existing rows on conflict)\n"
-                        )
-                    elif sub in ("comment", "c"):
-                        s = (
-                            "scrape comment <comment_id> [flags]: Scrape a single comment.\n"
-                            "Flags:\n"
-                            "  --overwrite, -o  (update existing rows on conflict)\n"
-                        )
-                    else:
-                        s = (
-                            "scrape <target> <id_or_url> [flags]\n"
-                            "Common flags for scrape targets:\n"
-                            "  --overwrite, -o  - Update existing rows on conflict.\n"
-                            "  --limit N  - Integer limit (use 'None' for unlimited).\n"
-                            "  --threshold N  - replace_more threshold when fetching comments.\n"
-                            "  --sort <sorter>  - For subreddits: new|hot|top|rising|controversial.\n"
-                            "  --subs-only  - For subreddits: skip comment scraping.\n"
-                            "  --max-workers N, -w  - Concurrency for comment scraping.\n"
-                            "  --skip-existing, -s  - Skip submissions already present in DB.\n"
-                        )
-                    console.print(s)
-                    continue
-
-                # help for other top-level commands
-                t = tokens[1].lower()
-                if t == "delete":
-                    s = (
-                        "delete <submissions|comments|all>: Remove rows from the "
-                        "given tables.\n"
-                        "  submissions - delete all submission rows.\n"
-                        "  comments - delete all comment rows.\n"
-                        "  all - delete rows from both tables.\n"
-                        "This command will prompt for confirmation before deleting."
-                    )
-                    console.print(s)
-                    continue
-
-                if t == "db":
-                    s = "db <SQL>: Execute a SQL statement against the configured DB. Use carefully."
-                    console.print(s)
-                    continue
-
-                # fallback
-                console.print("No help available for that command.")
-                continue
-            # end of help command
 
             # Support commands:
             #   scrape thread <id|url>
@@ -261,10 +168,7 @@ def prompt_loop():
                 #   scrape thread <id|url> --overwrite --limit 0 --threshold 0
                 tokens = shlex.split(user_input)
                 if len(tokens) < 3:
-                    print(
-                        "Usage: scrape <target> <id_or_url> "
-                        "[--overwrite] [--limit N] [--threshold N] [--skip-existing|-s]"
-                    )
+                    console.print(prompt_data["scrape"]["error_desc"])
                     continue
                 _, target = tokens[0], tokens[1]
                 target = target.lower()
@@ -310,7 +214,7 @@ def prompt_loop():
                         except ValueError:
                             print(f"Invalid limit value: {ns.limit}")
                             limit = None
-                # If invoking scrape subreddit and no --limit provided, default to 10
+                # If invoking scrape subreddit with no limit, default to 10
                 if target in ("subreddit", "r") and limit is None:
                     limit = 10
                 threshold = ns.threshold if ns.threshold is not None else 0

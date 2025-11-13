@@ -1,3 +1,7 @@
+"""Help text for prompt commands."""
+
+# TODO add exit-after flag help
+# TODO add skip-existing flag help
 prompt_data = {
     "scrape": {
         "base_desc": (
@@ -54,7 +58,6 @@ prompt_data = {
         "This prompts for confirmation."
     ),
     "db": "<b>db &lt;SQL&gt;</b>: run SQL against DB",
-    "help": "<b>help</b>: show this help text",
     "unknown": (
         "Error: Unknown command. Available commands:"
         " scrape, delete, db, help",
