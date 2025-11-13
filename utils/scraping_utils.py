@@ -14,6 +14,8 @@ from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .state import subreddit_progress
 
+"""Utils for scraping Reddit and inserting into DB."""
+
 
 # TODO factor out insertion into separate db_utils.py
 @with_resources(use_reddit=False, use_db=True)

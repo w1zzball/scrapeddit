@@ -3,6 +3,8 @@ from typing import Any
 from .connection_utils import with_resources
 from .console import console
 
+"""Utils for pure Reddit operations."""
+
 
 def format_submission(submission: Any) -> dict[str, str | int | float | bool]:
     formatted_submission = {
