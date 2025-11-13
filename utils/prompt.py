@@ -17,6 +17,7 @@ from .scraping_utils import (
 from .state import subreddit_progress
 from .db_utils import db_execute, clear_tables
 from .console import console
+from .prompt_help_text import prompt_data
 
 # pylint: disable=locally-disabled, line-too-long
 
@@ -113,52 +114,34 @@ def prompt_loop():
         if cmd == "scrape":
             # brief usage when only 'scrape' typed
             if len(tokens) == 1:
-                base = (
-                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>\n"
-                    " [--overwrite|-o] [--limit N] [--threshold N] [--max-workers N]"
-                )
-                return HTML(base)
+                return HTML(prompt_data["scrape"]["base_desc"])
 
             target = tokens[1].lower()
-            if target in ("thread", "t", "entire", "entire_thread"):
-                s = (
-                    "thread: scrape submission + comments. Flags: \n"
-                    "--overwrite/-o, --limit N (None=all), --threshold N"
-                )
-            elif target in ("subreddit", "r"):
-                s = (
-                    "subreddit: scrape many submissions. Flags: \n"
-                    "--sort (new|hot|top|rising|"
-                    "controversial), --limit N (10), --subs-only,\n "
-                    "--max-workers N (-w), --overwrite/-o [--skip-existing|-s]"
-                )
-            elif target in ("submission", "post", "s"):
-                s = "submission: scrape only submission. Flags: --overwrite/-o"
-            elif target in ("comment", "c"):
-                s = "comment: scrape a single comment. Flags: --overwrite/-o"
+            # help for thread
+            if target in prompt_data["scrape"]["thread"]["targets"]:
+                s = prompt_data["scrape"]["thread"]["desc"]
+            # help for subreddit
+            elif target in prompt_data["scrape"]["subreddit"]["targets"]:
+                s = prompt_data["scrape"]["subreddit"]["desc"]
+            # help for submission
+            elif target in prompt_data["scrape"]["submission"]["targets"]:
+                s = prompt_data["scrape"]["submission"]["desc"]
+            # help for comment
+            elif target in prompt_data["scrape"]["comment"]["targets"]:
+                s = prompt_data["scrape"]["comment"]["desc"]
+            # unknown target
             else:
-                s = (
-                    "Unknown scrape target. Use thread, submission, "
-                    "comment or subreddit"
-                )
+                s = prompt_data["scrape"]["error_desc"]
 
             return HTML(s)
 
         if cmd == "delete":
             # quick help for delete command shown in bottom toolbar
-            s = (
-                "delete: remove rows from tables. Usage: delete "
-                "&lt;submissions|comments|all&gt;. "
-                "This prompts for confirmation."
-            )
-            return HTML(s)
+            return HTML(prompt_data["delete"])
 
         if cmd == "db":
-            return HTML("<b>db &lt;SQL&gt;</b>: run SQL against DB")
-
-        return HTML(
-            "Unknown command. Try <b>scrape</b>, <b>db</b> or " "<b>exit</b>"
-        )
+            return HTML(prompt_data["db"])
+        return HTML(prompt_data["unknown"])
 
     cli_input_executed = False
     while True:
