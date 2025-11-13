@@ -1,5 +1,6 @@
 import praw
 import psycopg
+from psycopg import sql
 import os
 from contextlib import contextmanager
 from typing import Generator, Callable, Any, TypeVar
@@ -7,6 +8,7 @@ from typing import Generator, Callable, Any, TypeVar
 
 @contextmanager
 def reddit_session() -> Generator[praw.Reddit, None, None]:
+    """provide a reddit instance"""
     reddit = praw.Reddit(
         username=os.getenv("USERNAME"),
         password=os.getenv("PASSWORD"),
@@ -23,25 +25,32 @@ def reddit_session() -> Generator[praw.Reddit, None, None]:
 
 @contextmanager
 def db_connection(
-    schema: str | None = "test", auto_commit: bool = True
+    schema: str = "test", auto_commit: bool = True
 ) -> Generator[psycopg.Connection, None, None]:
+    """provide a database connection"""
+    db_string = os.getenv("DB_STRING") or "localhost"
     conn = psycopg.connect(
-        os.getenv("DB_STRING"),
+        db_string,
         autocommit=auto_commit,
     )
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SET search_path TO {schema}")
+            cur.execute(
+                sql.SQL("SET search_path TO {}").format(sql.Identifier(schema))
+            )
         yield conn
     finally:
         conn.close()
 
 
 def with_resources(
-    use_db: bool = True, use_reddit: bool = True, *, schema: str | None = "test"
+    use_db: bool = True,
+    use_reddit: bool = True,
+    *,
+    schema: str = "test",
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator for optional reddit and db resources."""
-
+    # typing to prevent type checker complaints on wrapped functions
     T = TypeVar("T", bound=Callable[..., Any])
 
     def decorator(f: T) -> T:

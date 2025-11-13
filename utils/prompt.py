@@ -21,6 +21,11 @@ from .console import console
 # pylint: disable=locally-disabled, line-too-long
 
 
+# TODO factor out help strings
+# TODO add unit tests for prompt loop (mocking input/output)
+# TODO add scrape redditor command
+# TODO add recursive subreddit scraper command
+# TODO remove help command and just use bottom toolbar
 def prompt_loop():
     """Interactive prompt loop for scrapeddit CLI."""
     # Autocompletion for top-level commands and scrape targets.
@@ -99,7 +104,8 @@ def prompt_loop():
 
         if not tokens:
             return HTML(
-                "Commands: <b>scrape</b>, <b>db</b>, " "<b>delete</b>, <b>exit</b>"
+                "Commands: <b>scrape</b>, <b>db</b>, "
+                "<b>delete</b>, <b>exit</b>"
             )
 
         cmd = tokens[0].lower()
@@ -108,7 +114,7 @@ def prompt_loop():
             # brief usage when only 'scrape' typed
             if len(tokens) == 1:
                 base = (
-                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>"
+                    "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>\n"
                     " [--overwrite|-o] [--limit N] [--threshold N] [--max-workers N]"
                 )
                 return HTML(base)
@@ -116,14 +122,14 @@ def prompt_loop():
             target = tokens[1].lower()
             if target in ("thread", "t", "entire", "entire_thread"):
                 s = (
-                    "thread: scrape submission + comments. Flags: "
+                    "thread: scrape submission + comments. Flags: \n"
                     "--overwrite/-o, --limit N (None=all), --threshold N"
                 )
             elif target in ("subreddit", "r"):
                 s = (
-                    "subreddit: scrape many submissions "
-                    "Flags: --sort (new|hot|top|rising|"
-                    "controversial), --limit N (10), --subs-only, "
+                    "subreddit: scrape many submissions. Flags: \n"
+                    "--sort (new|hot|top|rising|"
+                    "controversial), --limit N (10), --subs-only,\n "
                     "--max-workers N (-w), --overwrite/-o [--skip-existing|-s]"
                 )
             elif target in ("submission", "post", "s"):
@@ -150,7 +156,9 @@ def prompt_loop():
         if cmd == "db":
             return HTML("<b>db &lt;SQL&gt;</b>: run SQL against DB")
 
-        return HTML("Unknown command. Try <b>scrape</b>, <b>db</b> or " "<b>exit</b>")
+        return HTML(
+            "Unknown command. Try <b>scrape</b>, <b>db</b> or " "<b>exit</b>"
+        )
 
     cli_input_executed = False
     while True:
@@ -160,6 +168,7 @@ def prompt_loop():
                     "scrapeddit> ",
                     bottom_toolbar=bottom_toolbar,
                     auto_suggest=AutoSuggestFromHistory(),
+                    wrap_lines=True,
                 ).strip()
                 if not user_input:
                     continue
@@ -294,7 +303,10 @@ def prompt_loop():
                     "--exit-after", action="store_true", dest="exit_after"
                 )
                 parser.add_argument(
-                    "-s", "--skip-existing", action="store_true", dest="skip_existing"
+                    "-s",
+                    "--skip-existing",
+                    action="store_true",
+                    dest="skip_existing",
                 )
                 try:
                     ns, unknown = parser.parse_known_args(flags)
@@ -410,7 +422,9 @@ def prompt_loop():
                     print("Aborted: confirmation not provided.")
                     continue
                 subs_del, comm_del = clear_tables(target)
-                console.print(f"Deleted: submissions={subs_del}, comments={comm_del}")
+                console.print(
+                    f"Deleted: submissions={subs_del}, comments={comm_del}"
+                )
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 db_execute(sql_str)

@@ -1,4 +1,3 @@
-from .db_utils import db_get_redditors_from_subreddit
 from .console import console
 from .reddit_utils import (
     get_submission,
@@ -318,7 +317,9 @@ def scrape_subreddit(
             console.print(f"Skipped {skipped_count} existing submissions.")
 
     # formatted submissions batch
-    formatted_rows = [tuple(format_submission(s).values()) for s in submissions]
+    formatted_rows = [
+        tuple(format_submission(s).values()) for s in submissions
+    ]
     cols = [
         "name",
         "author",
@@ -355,12 +356,13 @@ def scrape_subreddit(
     console.print(f"Inserted {len(submissions)} submissions.")
 
     # threaded comment scraping
+    total_new = 0
+    total_updated = 0
+    total_skipped = 0
+    submissions_scraped = 0
+    total_errors = 0
+
     if not subs_only:
-        total_new = 0
-        total_updated = 0
-        total_skipped = 0
-        submissions_scraped = 0
-        total_errors = 0
         console.print(
             "Fetching comments for "
             f"{len(submissions)} threads (max {max_workers} workers)..."
@@ -400,7 +402,9 @@ def scrape_subreddit(
             task = progress.add_task("comments", total=len(submissions))
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(scrape_one, s): s.id for s in submissions}
+                futures = {
+                    executor.submit(scrape_one, s): s.id for s in submissions
+                }
                 for future in as_completed(futures):
                     info, err = future.result()
                     # advance the rich progress bar and our shared state
@@ -409,11 +413,14 @@ def scrape_subreddit(
 
                     if err:
                         total_errors += 1
-                        console.print(f"[red]Error scraping {info[3]}: {err}[/red]")
+                        console.print(
+                            f"[red]Error scraping {info[3]}: {err}[/red]"
+                        )
                     else:
                         console.print(
                             f"[green]✔ {info[3]} done[/green] "
-                            f"{info[0]} new, {info[1]} updated, {info[2]} skipped"
+                            f"{info[0]} new, {info[1]} updated, "
+                            f"{info[2]} skipped"
                         )
                         total_new += info[0]
                         total_updated += info[1]
@@ -510,7 +517,9 @@ def scrape_redditors(
     for redditor in redditors:
         try:
             console.print(f"Scraping redditor: u/{redditor}")
-            scrape_redditor(redditor, limit=limit, overwrite=overwrite, sort=sort)
+            scrape_redditor(
+                redditor, limit=limit, overwrite=overwrite, sort=sort
+            )
         except Exception as e:
             console.print(f"[red]Error scraping u/{redditor}: {e}[/red]")
 
@@ -527,15 +536,18 @@ def recursively_scrape_redditors_for_subreddit(
     scraped_redditors: list[str] = [],
 ):
     """
-    Given a subreddit, fetch all redditors with comments on that subreddit from database,
-    then scrape their comments, for each subreddit found in those comments, repeat
+    Given a subreddit, fetch all redditors with comments on that
+    subreddit from database, then scrape their comments, and for each
+    subreddit found in those comments, repeat
     """
 
     redditors = get_redditors_from_subreddit(subreddit, limit=redditor_limit)
     redditors = [r for r in redditors if r not in scraped_redditors]
     print("got redittors")
     console.print(f"Found {len(redditors)} redditors in r/{subreddit}.")
-    scrape_redditors(redditors, limit=comment_limit, overwrite=overwrite, sort=sort)
+    scrape_redditors(
+        redditors, limit=comment_limit, overwrite=overwrite, sort=sort
+    )
     scraped_redditors.extend(redditors)
     if depth == 0:
         return
@@ -546,9 +558,13 @@ def recursively_scrape_redditors_for_subreddit(
             (list(redditors),),
         )
         subreddits = [
-            row[0].replace("r/", "") for row in cur.fetchall() if row[0] is not None
+            row[0].replace("r/", "")
+            for row in cur.fetchall()
+            if row[0] is not None
         ]
-    console.print(f"Found {len(subreddits)} subreddits from redditors' comments.")
+    console.print(
+        f"Found {len(subreddits)} subreddits from redditors' comments."
+    )
     for sub in subreddits:
         console.print(f"Recursing into subreddit: r/{sub} (depth {depth-1})")
 

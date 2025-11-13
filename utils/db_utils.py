@@ -50,7 +50,9 @@ def db_get_redditors_from_subreddit(
     conn, subreddit: str, limit: int = 100
 ) -> list[str]:
     """Given a subreddit fetch all redditors with comments on that subreddit"""
-    subreddit_name = subreddit if subreddit.startswith("r/") else "r/" + subreddit
+    subreddit_name = (
+        subreddit if subreddit.startswith("r/") else "r/" + subreddit
+    )
     with conn.cursor() as cur:
         cur.execute(
             f"""

@@ -97,7 +97,7 @@ def get_redditors_comments(
 @with_resources(use_db=False, use_reddit=True)
 def get_redditors_from_subreddit(
     reddit, subreddit_name: str, limit: int = 100, sort: str = "new"
-) -> list[str]:
+):
     """Given a subreddit fetch redditors with comments on that subreddit"""
     sub = reddit.subreddit(subreddit_name)
     sorter = sort.lower()
