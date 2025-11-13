@@ -21,7 +21,7 @@ from scrapeddit.utils.scraping_utils import (
 
 
 def main():
-    prompt_loop()
+    # prompt_loop()
     # comments = get_redditors_comments("bubblebotz", 5)
     # for comment in comments:
     #     formatted = format_comment(comment)
@@ -29,9 +29,9 @@ def main():
     # redditors = db_get_redditors_from_subreddit("cats", 100)
     # print(redditors)
     # scrape_redditor("bubblebotz", sort="top", limit=10)
-    # recursively_scrape_redditors_for_subreddit(
-    #     "gaming", redditor_limit=100, comment_limit=100, depth=5
-    # )
+    recursively_scrape_redditors_for_subreddit(
+        "pets", redditor_limit=100, comment_limit=100, depth=5
+    )
     # redditors = get_redditors_from_subreddit("cats")
     # print(redditors)
 

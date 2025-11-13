@@ -1,4 +1,8 @@
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(override=True)
-print("Environment variables loaded from .env file")
+if env_path := find_dotenv(usecwd=True, raise_error_if_not_found=False):
+    load_dotenv(env_path, override=True)
+    print(f"Environment variables loaded from {env_path}")
+
+else:
+    raise FileNotFoundError(".env file not found")
