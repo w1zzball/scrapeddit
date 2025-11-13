@@ -534,6 +534,7 @@ def recursively_scrape_redditors_for_subreddit(
     sort: str = "top",
     depth: int = 2,
     scraped_redditors: list[str] = [],
+    scraped_subreddits: list[str] = [],
 ):
     """
     Given a subreddit, fetch all redditors with comments on that
@@ -542,6 +543,7 @@ def recursively_scrape_redditors_for_subreddit(
     """
 
     redditors = get_redditors_from_subreddit(subreddit, limit=redditor_limit)
+    scraped_subreddits.append(subreddit)
     redditors = [r for r in redditors if r not in scraped_redditors]
     print("got redittors")
     console.print(f"Found {len(redditors)} redditors in r/{subreddit}.")
@@ -560,7 +562,7 @@ def recursively_scrape_redditors_for_subreddit(
         subreddits = [
             row[0].replace("r/", "")
             for row in cur.fetchall()
-            if row[0] is not None
+            if row[0] is not None and row[0] not in scraped_subreddits
         ]
     console.print(
         f"Found {len(subreddits)} subreddits from redditors' comments."
@@ -575,4 +577,6 @@ def recursively_scrape_redditors_for_subreddit(
             overwrite=overwrite,
             sort=sort,
             depth=depth - 1,
+            scraped_redditors=scraped_redditors,
+            scraped_subreddits=scraped_subreddits,
         )
