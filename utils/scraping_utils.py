@@ -270,6 +270,7 @@ def scrape_entire_thread(
         )
 
 
+# TODO update count logic to reflect skipped submissions
 @with_resources(use_reddit=True, use_db=True)
 def scrape_subreddit(
     reddit,
@@ -279,9 +280,11 @@ def scrape_subreddit(
     limit: int | None = 10,
     overwrite: bool = False,
     subs_only: bool = False,
+    comments_only: bool = False,
     max_workers: int = 5,  # set to respect rate limits
     skip_existing: bool = False,
 ):
+    """Scrape submissions and comments from a subreddit."""
     start_time = time.perf_counter()
     sub = reddit.subreddit(subreddit_name)
     sorter = sort.lower()
@@ -318,44 +321,48 @@ def scrape_subreddit(
         if skipped_count > 0:
             console.print(f"Skipped {skipped_count} existing submissions.")
 
-    # formatted submissions batch
-    formatted_rows = [
-        tuple(format_submission(s).values()) for s in submissions
-    ]
-    cols = [
-        "name",
-        "author",
-        "title",
-        "selftext",
-        "url",
-        "created_utc",
-        "edited",
-        "ups",
-        "subreddit",
-        "permalink",
-    ]
-    placeholders = ", ".join(["%s"] * len(cols))
+    # insert formatted submissions batch
+    if not comments_only:
+        formatted_rows = [
+            tuple(format_submission(s).values()) for s in submissions
+        ]
+        cols = [
+            "name",
+            "author",
+            "title",
+            "selftext",
+            "url",
+            "created_utc",
+            "edited",
+            "ups",
+            "subreddit",
+            "permalink",
+        ]
+        placeholders = ", ".join(["%s"] * len(cols))
 
-    if not overwrite:
-        conflict_clause = "ON CONFLICT (name) DO NOTHING"
-    else:
-        conflict_clause = (
-            "ON CONFLICT (name) DO UPDATE SET "
-            "author=EXCLUDED.author, title=EXCLUDED.title"
+        if not overwrite:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING"
+        else:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, title=EXCLUDED.title"
+            )
+
+        # build SQL statement in smaller parts to avoid long lines
+        columns_str = ", ".join(cols)
+        sql_stmt = (
+            "INSERT INTO submissions (" + columns_str + ")\n"
+            "VALUES (" + placeholders + ")\n" + conflict_clause
         )
 
-    # build SQL statement in smaller parts to avoid long lines
-    columns_str = ", ".join(cols)
-    sql_stmt = (
-        "INSERT INTO submissions (" + columns_str + ")\n"
-        "VALUES (" + placeholders + ")\n" + conflict_clause
-    )
+        with conn.cursor() as cur:
+            cur.executemany(sql_stmt, formatted_rows)
+        conn.commit()
 
-    with conn.cursor() as cur:
-        cur.executemany(sql_stmt, formatted_rows)
-    conn.commit()
+        console.print(f"Inserted {len(submissions)} submissions.")
 
-    console.print(f"Inserted {len(submissions)} submissions.")
+    else:
+        console.print("Skipping submission insertion as (comments only mode).")
 
     # threaded comment scraping
     total_new = 0
@@ -409,7 +416,7 @@ def scrape_subreddit(
                 }
                 for future in as_completed(futures):
                     info, err = future.result()
-                    # advance the rich progress bar and our shared state
+                    # advance the rich progress bar and shared state
                     progress.advance(task)
                     subreddit_progress["current"] += 1
 
