@@ -30,21 +30,9 @@ def prompt_loop():
     # Autocompletion for top-level commands and scrape targets.
     completer = NestedCompleter.from_nested_dict(
         {
-            "scrape": {
-                "thread": None,
-                "submission": None,
-                "comment": None,
-                "subreddit": None,
-                # short aliases
-                "t": None,
-                "s": None,
-                "c": None,
-                "r": None,
-            },
+            "scrape": {func for func in prompt_data["scrape"].keys()},
             "delete": {
-                "submissions": None,
-                "comments": None,
-                "all": None,
+                targets for targets in prompt_data["delete"]["targets"].keys()
             },
             "db": None,
             "exit": None,
@@ -239,6 +227,7 @@ def prompt_loop():
                             post_id=arg,
                             subreddit_name=arg,
                             comment_id=arg,
+                            user_id=arg,
                             sort=sort,
                             limit=limit,
                             threshold=threshold,
