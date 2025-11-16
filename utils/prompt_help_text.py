@@ -7,6 +7,7 @@ from utils.scraping_utils import (
     scrape_submission,
     scrape_subreddit,
     scrape_redditor,
+    expand_redditors_comments,
 )
 
 # TODO add exit-after flag help
@@ -73,6 +74,15 @@ prompt_data = {
             ),
             "func": scrape_subreddit,
         },
+    },
+    "expand": {
+        "targets": ("expand", "expand_redditors_comments"),
+        "desc": (
+            "expand: expand redditors comments with less"
+            " than a threshold number of comments. "
+            "Flags: --threshold N"
+        ),
+        "func": expand_redditors_comments,
     },
     "delete": {
         "targets": {

@@ -273,6 +273,34 @@ def scrape_entire_thread(
         )
 
 
+@with_resources(use_reddit=False, use_db=True)
+def expand_redditors_comments(conn, threshold, limit, **kwargs):
+    """get more comments from redditors in the
+    database with less than threshold comments"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT author, COUNT(*)
+            FROM comments
+            GROUP BY author
+            HAVING COUNT(*) < %s;
+            """,
+            (threshold,),
+        )
+        redditors = [row[0] for row in cur.fetchall()]
+
+    console.print(
+        f"Found {len(redditors)} redditors with less than "
+        f"{threshold} comments. Expanding..."
+    )
+    for redditor in redditors:
+        console.print(f"Expanding u/{redditor}...")
+        try:
+            scrape_redditor(redditor, overwrite=False, limit=limit)
+        except Exception as e:
+            console.print(f"[red]Error expanding u/{redditor}: {e}[/red]")
+
+
 # TODO update count logic to reflect skipped submissions
 @with_resources(use_reddit=True, use_db=True)
 def scrape_subreddit(

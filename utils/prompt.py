@@ -28,6 +28,7 @@ def prompt_loop():
             "delete": {
                 targets for targets in prompt_data["delete"]["targets"].keys()
             },
+            "expand": None,
             "db": None,
             "exit": None,
             "quit": None,
@@ -262,6 +263,20 @@ def prompt_loop():
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
                 prompt_data["db"]["func"](sql_str)
+            elif user_input.startswith("expand "):
+                tokens = shlex.split(user_input)
+                flags = tokens[1:]
+                parser = argparse.ArgumentParser(add_help=False)
+                parser.add_argument("--threshold", type=int, required=True)
+                parser.add_argument("--limit", type=int, required=False)
+                try:
+                    ns, unknown = parser.parse_known_args(flags)
+                except Exception as e:
+                    print("Error parsing flags:", e)
+                    continue
+                threshold = ns.threshold
+                limit = ns.limit
+                prompt_data["expand"]["func"](threshold=threshold, limit=limit)
             elif user_input in {"exit", "quit"}:
                 break
             else:
