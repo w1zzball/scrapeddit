@@ -8,12 +8,6 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import NestedCompleter
-from .scraping_utils import (
-    scrape_entire_thread,
-    scrape_submission,
-    scrape_comment,
-    scrape_subreddit,
-)
 from .state import subreddit_progress
 from .db_utils import db_execute, clear_tables
 from .console import console
@@ -125,7 +119,7 @@ def prompt_loop():
             return HTML(prompt_data["delete"]["desc"])
         # help for db command
         if cmd == "db":
-            return HTML(prompt_data["db"])
+            return HTML(prompt_data["db"]["desc"])
         return HTML(prompt_data["unknown"])
 
     cli_input_executed = False
@@ -267,7 +261,7 @@ def prompt_loop():
                 )
             elif user_input.startswith("db "):
                 _, sql_str = user_input.split(" ", 1)
-                db_execute(sql_str)
+                prompt_data["db"]["func"](sql_str)
             elif user_input in {"exit", "quit"}:
                 break
             else:

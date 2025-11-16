@@ -1,6 +1,6 @@
 """Help text for prompt commands."""
 
-from utils.db_utils import clear_tables
+from utils.db_utils import clear_tables, db_execute
 from utils.scraping_utils import (
     scrape_comment,
     scrape_entire_thread,
@@ -87,7 +87,10 @@ prompt_data = {
         ),
         "func": clear_tables,
     },
-    "db": "<b>db &lt;SQL&gt;</b>: run SQL against DB",
+    "db": {
+        "desc": "<b>db &lt;SQL&gt;</b>: run SQL against DB",
+        "func": db_execute,
+    },
     "unknown": (
         "Error: Unknown command. Available commands:"
         " scrape, delete, db, help",
