@@ -409,7 +409,7 @@ def scrape_subreddit(
             "Scraping threads...",
             BarColumn(),
             TextColumn("{task.completed}/{task.total}"),
-            TimeRemainingColumn(),
+            TimeRemainingColumn(elapsed_when_finished=True),
             console=console,
         ) as progress:
             task = progress.add_task("comments", total=len(submissions))
@@ -549,7 +549,7 @@ def scrape_redditors(
 
 
 @with_resources(use_reddit=False, use_db=True)
-def expand_redditors_comments(conn, threshold, limit, **kwargs):
+def expand_redditors_comments(conn, threshold, limit, max_workers=5, **kwargs):
     """get more comments from redditors in the
     database with less than threshold comments"""
     with conn.cursor() as cur:
@@ -568,12 +568,32 @@ def expand_redditors_comments(conn, threshold, limit, **kwargs):
         f"Found {len(redditors)} redditors with less than "
         f"{threshold} comments. Expanding..."
     )
-    for redditor in redditors:
-        console.print(f"Expanding u/{redditor}...")
-        try:
-            scrape_redditor(redditor, overwrite=False, limit=limit)
-        except Exception as e:
-            console.print(f"[red]Error expanding u/{redditor}: {e}[/red]")
+
+    # rich progress bar for main scraping loop
+    with Progress(
+        "expanding redditors...",
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeRemainingColumn(elapsed_when_finished=True),
+        console=console,
+    ) as progress:
+        task = progress.add_task("redditors", total=len(redditors))
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(scrape_redditor, redditor): redditor
+                for redditor in redditors
+            }
+            for future in as_completed(futures):
+                redditor = futures[future]
+                try:
+                    future.result()
+                    console.print(f"[green]✔ u/{redditor} done[/green]")
+                except Exception as e:
+                    console.print(
+                        f"[red]Error expanding u/{redditor}: {e}[/red]"
+                    )
+                progress.advance(task)
 
 
 @with_resources(use_reddit=False, use_db=True)
