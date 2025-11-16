@@ -107,11 +107,11 @@ def prompt_loop():
             )
 
         cmd = tokens[0].lower()
-
+        # ---- help for scrape command ----#
         if cmd == "scrape":
             # brief usage when only 'scrape' typed
             if len(tokens) == 1:
-                return HTML(prompt_data["scrape"]["base_desc"])
+                return HTML(prompt_data["scrape"]["base"]["desc"])
 
             target = tokens[1].lower()
             # help for thread
@@ -128,14 +128,14 @@ def prompt_loop():
                 s = prompt_data["scrape"]["comment"]["desc"]
             # unknown target
             else:
-                s = prompt_data["scrape"]["error_desc"]
+                s = prompt_data["scrape"]["error"]["desc"]
 
             return HTML(s)
 
         if cmd == "delete":
-            # quick help for delete command shown in bottom toolbar
-            return HTML(prompt_data["delete"])
-
+            # help for delete command
+            return HTML(prompt_data["delete"]["desc"])
+        # help for db command
         if cmd == "db":
             return HTML(prompt_data["db"])
         return HTML(prompt_data["unknown"])
@@ -168,7 +168,7 @@ def prompt_loop():
                 #   scrape thread <id|url> --overwrite --limit 0 --threshold 0
                 tokens = shlex.split(user_input)
                 if len(tokens) < 3:
-                    console.print(prompt_data["scrape"]["error_desc"])
+                    console.print(prompt_data["scrape"]["error"]["desc"])
                     continue
                 _, target = tokens[0], tokens[1]
                 target = target.lower()
@@ -226,65 +226,29 @@ def prompt_loop():
                     if getattr(ns, "max_workers", None) is not None
                     else 5
                 )
-                # support delete command: handled below
-                # thread synonyms
                 # TODO: clean up limit handling here and above
-                if target in ("thread", "t", "entire", "entire_thread"):
-                    if arg.startswith("http"):
-                        scrape_entire_thread(
-                            post_url=arg,
+                scrape_functions = [
+                    command_dict
+                    for name, command_dict in prompt_data["scrape"].items()
+                    if prompt_data["scrape"].get(name).get("func")
+                ]
+                for prompt in scrape_functions:
+                    if target in prompt["targets"]:
+                        func = prompt["func"]
+                        func(
+                            post_id=arg,
+                            subreddit_name=arg,
+                            comment_id=arg,
+                            sort=sort,
                             limit=limit,
                             threshold=threshold,
                             overwrite=overwrite,
+                            subs_only=subs_only,
+                            max_workers=max_workers,
+                            skip_existing=skip_existing,
                         )
                     if exit_after:
                         break
-                    else:
-                        scrape_entire_thread(
-                            post_id=arg,
-                            limit=limit,
-                            threshold=threshold,
-                            overwrite=overwrite,
-                        )
-                    if exit_after:
-                        break
-                # submission synonyms
-                elif target in ("submission", "post", "s"):
-                    if arg.startswith("http"):
-                        scrape_submission(
-                            post_url=arg,
-                            overwrite=overwrite,
-                        )
-                    if exit_after:
-                        break
-                    else:
-                        scrape_submission(
-                            post_id=arg,
-                            overwrite=overwrite,
-                        )
-                    if exit_after:
-                        break
-                # comment
-                elif target in ("comment", "c"):
-                    scrape_comment(arg, overwrite=overwrite)
-                    if exit_after:
-                        break
-                # subreddit (collection of submissions)
-                elif target in ("subreddit", "r"):
-                    # arg should be subreddit name, e.g. 'python' or 'r/python'
-                    scrape_subreddit(
-                        arg,
-                        sort=sort,
-                        limit=limit,
-                        overwrite=overwrite,
-                        subs_only=subs_only,
-                        max_workers=max_workers,
-                        skip_existing=skip_existing,
-                    )
-                    if exit_after:
-                        break
-                else:
-                    print("Unknown target; use thread, submission or comment.")
             # delete command
             elif user_input.startswith("delete ") or user_input == "delete":
                 tokens = shlex.split(user_input)
@@ -292,11 +256,11 @@ def prompt_loop():
                     print("Usage: delete <submissions|comments|all>")
                     continue
                 target = tokens[1].lower()
-                if target in ("subs", "submission", "submissions"):
+                if target in prompt_data["delete"]["targets"]["submissions"]:
                     target = "submissions"
-                elif target in ("c", "comment", "comments"):
+                elif target in prompt_data["delete"]["targets"]["comments"]:
                     target = "comments"
-                elif target == "all":
+                elif target == prompt_data["delete"]["targets"]["all"]:
                     target = "all"
                 else:
                     print("Unknown delete target. Use submissions,")
@@ -308,7 +272,7 @@ def prompt_loop():
                 if confirm != "Yes":
                     print("Aborted: confirmation not provided.")
                     continue
-                subs_del, comm_del = clear_tables(target)
+                subs_del, comm_del = prompt_data["delete"]["func"](target)
                 console.print(
                     f"Deleted: submissions={subs_del}, comments={comm_del}"
                 )

@@ -26,6 +26,7 @@ def scrape_submission(
     overwrite: bool = False,
     index=None,
     total: int | None = None,
+    **kwargs,
 ):
     """Fetch a submission and insert it into the DB.
 
@@ -77,7 +78,7 @@ def scrape_submission(
 
 
 @with_resources(use_reddit=False, use_db=True)
-def scrape_comment(conn, comment_id: str, overwrite: bool = False):
+def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
     """
     Fetch a single comment and insert into DB.
 
@@ -126,6 +127,7 @@ def scrape_comments_in_thread(
     limit: int | None = None,
     threshold=0,
     overwrite: bool = False,
+    **kwargs,
 ):
     """Scrape all comments in a thread and insert/update into DB.
 
@@ -252,6 +254,7 @@ def scrape_entire_thread(
     threshold=0,
     overwrite: bool = False,
     index: int | None = None,
+    **kwargs,
 ):
     with console.status("Scraping submission...", spinner="dots"):
         scrape_submission(
@@ -283,6 +286,7 @@ def scrape_subreddit(
     comments_only: bool = False,
     max_workers: int = 5,  # set to respect rate limits
     skip_existing: bool = False,
+    **kwargs,
 ):
     """Scrape submissions and comments from a subreddit."""
     start_time = time.perf_counter()
@@ -478,7 +482,12 @@ def scrape_subreddit(
 # TODO stop duplicate redditor scraping
 @with_resources(use_reddit=False, use_db=True)
 def scrape_redditor(
-    conn, user_id, limit: int = 100, overwrite: bool = False, sort: str = "new"
+    conn,
+    user_id,
+    limit: int = 100,
+    overwrite: bool = False,
+    sort: str = "new",
+    **kwargs,
 ):
     """
     Given a redditor, scrape the last n (default: 100) comments they made
