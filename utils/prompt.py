@@ -82,12 +82,15 @@ def prompt_loop():
             # fail silently on any error
             pass
 
+            # TODO change to declarative style with data structure mapping
         if not tokens:
             return HTML(
                 "Commands: <b>scrape</b>, <b>db</b>, "
                 "<b>delete</b>, <b>exit</b>"
             )
 
+        # TODO refactor to allow delete, db, and other commands
+        # TODO ... to be supporte in same loop
         cmd = tokens[0].lower()
         # ---- help for scrape command ----#
         if cmd == "scrape":
@@ -130,6 +133,7 @@ def prompt_loop():
                 if not user_input:
                     continue
 
+            # TODO refactor to accept none scrape commands
             # Support commands:
             #   scrape thread <id|url>
             #   scrape submission <id|url>
