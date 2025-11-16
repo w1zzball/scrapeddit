@@ -97,6 +97,8 @@ prompt_data = {
         ),
         "func": clear_tables,
     },
+    # TODO wrap singleton commands in dict like scrape
+    # TODO refactor unknown command handling to match (desc, func)
     "db": {
         "desc": "<b>db &lt;SQL&gt;</b>: run SQL against DB",
         "func": db_execute,
