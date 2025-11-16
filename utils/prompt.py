@@ -17,7 +17,6 @@ from .prompt_help_text import prompt_data
 
 
 # TODO add unit tests for prompt loop (mocking input/output)
-# TODO add scrape redditor command
 # TODO add recursive subreddit scraper command
 def prompt_loop():
     """Interactive prompt loop for scrapeddit CLI."""
@@ -97,21 +96,10 @@ def prompt_loop():
                 return HTML(prompt_data["scrape"]["base"]["desc"])
 
             target = tokens[1].lower()
-            # help for thread
-            if target in prompt_data["scrape"]["thread"]["targets"]:
-                s = prompt_data["scrape"]["thread"]["desc"]
-            # help for subreddit
-            elif target in prompt_data["scrape"]["subreddit"]["targets"]:
-                s = prompt_data["scrape"]["subreddit"]["desc"]
-            # help for submission
-            elif target in prompt_data["scrape"]["submission"]["targets"]:
-                s = prompt_data["scrape"]["submission"]["desc"]
-            # help for comment
-            elif target in prompt_data["scrape"]["comment"]["targets"]:
-                s = prompt_data["scrape"]["comment"]["desc"]
-            # unknown target
-            else:
-                s = prompt_data["scrape"]["error"]["desc"]
+            s = prompt_data["scrape"]["error"]["desc"]
+            for scrape_func in prompt_data["scrape"].values():
+                if target in scrape_func.get("targets", ()):
+                    s = scrape_func["desc"]
 
             return HTML(s)
 
