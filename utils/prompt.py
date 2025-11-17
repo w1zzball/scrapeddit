@@ -134,6 +134,7 @@ def prompt_loop():
                     continue
 
             # TODO refactor to accept none scrape commands
+            # TODO factor out argparse handling to function returning args
             # Support commands:
             #   scrape thread <id|url>
             #   scrape submission <id|url>
