@@ -289,3 +289,56 @@ def test_get_redditor_comments_invalid_sort():
             )
 
         mock_reddit.redditor.assert_called_once_with("test_user")
+
+
+from unittest.mock import patch, MagicMock
+
+
+def test_get_redditors_from_subreddit():
+    mock_subreddit = MagicMock()
+    mock_post1 = MagicMock()
+    mock_post2 = MagicMock()
+    mock_subreddit.new.return_value = [mock_post1, mock_post2]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.format_submission"
+    ) as mock_format:
+
+        mock_reddit = MagicMock()
+        mock_reddit.subreddit.return_value = mock_subreddit
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        # mock format_submission to return author names
+        mock_format.side_effect = [
+            {"author": "user1"},
+            {"author": "user2"},
+        ]
+
+        redditors = mod.get_redditors_from_subreddit(
+            subreddit_name="testsubreddit", limit=2, sort="new"
+        )
+
+        mock_reddit.subreddit.assert_called_once_with("testsubreddit")
+        assert redditors == ["user1", "user2"]
+
+
+def test_get_redditors_from_subreddit_no_submissions():
+    mock_subreddit = MagicMock()
+    mock_subreddit.new.return_value = []
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+
+        mock_reddit = MagicMock()
+        mock_reddit.subreddit.return_value = mock_subreddit
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        redditors = mod.get_redditors_from_subreddit(
+            subreddit_name="testsubreddit", limit=2, sort="new"
+        )
+
+        mock_reddit.subreddit.assert_called_once_with("testsubreddit")
+        assert redditors == []
