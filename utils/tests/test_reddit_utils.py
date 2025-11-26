@@ -192,3 +192,100 @@ def test_get_comments_in_thread_by_post_url():
 
         mock_reddit.submission.assert_called_once_with(url="submission_url")
         assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments():
+    mock_redditor = MagicMock()
+    mock_comment1 = MagicMock()
+    mock_comment1.name = "t1_comment1"
+    mock_comment2 = MagicMock()
+    mock_comment2.name = "t1_comment2"
+    # construct mock comments list
+    mock_redditor.comments.new.return_value = [
+        mock_comment1,
+        mock_comment2,
+    ]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(user_id="test_user", limit=2)
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
+        assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments_top():
+    mock_redditor = MagicMock()
+    mock_comment1 = MagicMock()
+    mock_comment1.name = "t1_comment1"
+    mock_comment2 = MagicMock()
+    mock_comment2.name = "t1_comment2"
+    # construct mock comments list
+    mock_redditor.comments.top.return_value = [
+        mock_comment1,
+        mock_comment2,
+    ]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(
+            user_id="test_user", limit=2, sort="top"
+        )
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
+        assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments_new():
+    mock_redditor = MagicMock()
+    mock_comment1 = MagicMock()
+    mock_comment1.name = "t1_comment1"
+    mock_comment2 = MagicMock()
+    mock_comment2.name = "t1_comment2"
+    # construct mock comments list
+    mock_redditor.comments.new.return_value = [
+        mock_comment1,
+        mock_comment2,
+    ]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(
+            user_id="test_user", limit=2, sort="new"
+        )
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
+        assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments_invalid_sort():
+    mock_redditor = MagicMock()
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        with pytest.raises(ValueError):
+            mod.get_redditors_comments(
+                user_id="test_user", limit=2, sort="invalid_sort"
+            )
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
