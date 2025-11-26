@@ -142,3 +142,53 @@ def test_format_comment_with_submission_id():
     formatted = mod.format_comment(mock_comment)
 
     assert formatted[7] == "submission_id"
+
+
+def test_get_comments_in_thread_by_post_id():
+    mock_submission = MagicMock()
+    mock_comment1 = MagicMock()
+    mock_comment1.name = "t1_comment1"
+    mock_comment2 = MagicMock()
+    mock_comment2.name = "t1_comment2"
+    # construct mock comments list
+    mock_submission.comments.list.return_value = [
+        mock_comment1,
+        mock_comment2,
+    ]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.submission.return_value = mock_submission
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_comments_in_thread(post_id="submission_id")
+
+        mock_reddit.submission.assert_called_once_with(id="submission_id")
+        assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_comments_in_thread_by_post_url():
+    mock_submission = MagicMock()
+    mock_comment1 = MagicMock()
+    mock_comment1.name = "t1_comment1"
+    mock_comment2 = MagicMock()
+    mock_comment2.name = "t1_comment2"
+    # construct mock comments list
+    mock_submission.comments.list.return_value = [
+        mock_comment1,
+        mock_comment2,
+    ]
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.submission.return_value = mock_submission
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_comments_in_thread(post_url="submission_url")
+
+        mock_reddit.submission.assert_called_once_with(url="submission_url")
+        assert comments == [mock_comment1, mock_comment2]
