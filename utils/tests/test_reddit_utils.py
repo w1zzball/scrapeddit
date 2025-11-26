@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import scrapeddit.utils.reddit_utils as mod
 
 
+# patch decorator
 @pytest.fixture(autouse=True)
 def mock_with_resources():
     # no-op decorator
@@ -13,10 +14,39 @@ def mock_with_resources():
         return decorator
 
     with pytest.MonkeyPatch.context() as mp:
-        import builtins
 
         mp.setattr(mod, "with_resources", fake_with_resources)
         yield
+
+
+def test_format_submission():
+    mock_submission = MagicMock()
+    mock_submission.name = "t3_abcdef"
+    mock_submission.author = "test_user"
+    mock_submission.title = "Test Title"
+    mock_submission.selftext = "This is a test selftext."
+    mock_submission.url = "https://reddit.com/test_post"
+    mock_submission.created_utc = 1609459200
+    mock_submission.edited = False
+    mock_submission.ups = 100
+    mock_submission.subreddit = "testsubreddit"
+    mock_submission.permalink = "/r/testsubreddit/comments/abcdef/test_title/"
+
+    formatted = mod.format_submission(mock_submission)
+
+    assert formatted["name"] == "t3_abcdef"
+    assert formatted["author"] == "test_user"
+    assert formatted["title"] == "Test Title"
+    assert formatted["selftext"] == "This is a test selftext."
+    assert formatted["url"] == "https://reddit.com/test_post"
+    assert formatted["created_utc"].year == 2021
+    assert formatted["edited"] is False
+    assert formatted["ups"] == 100
+    assert formatted["subreddit"] == "testsubreddit"
+    assert (
+        formatted["permalink"]
+        == "/r/testsubreddit/comments/abcdef/test_title/"
+    )
 
 
 def test_get_submission_by_id():
@@ -47,3 +77,68 @@ def test_get_submission_by_url():
 
         mock_reddit.submission.assert_called_once_with(url="submission_url")
         assert result is mock_submission
+
+
+def test_get_submission_no_params():
+    with pytest.raises(ValueError):
+        mod.get_submission()
+
+
+def test_get_comment():
+    mock_comment = MagicMock()
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.comment.return_value = mock_comment
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        result = mod.get_comment(comment_id="comment_url")
+
+        mock_reddit.comment.assert_called_once_with("comment_url")
+        assert result is mock_comment
+
+
+def test_format_comment():
+    mock_comment = MagicMock()
+    mock_comment.name = "t1_ghijkl"
+    mock_comment.author = "comment_user"
+    mock_comment.body = "This is a test comment."
+    mock_comment.created_utc = 1609459300
+    mock_comment.edited = True
+    mock_comment.ups = 50
+    mock_comment.parent_id = "t3_abcdef"
+    mock_comment.link_id = "t3_abcdef"
+    mock_comment.subreddit_name_prefixed = "r/testsubreddit"
+
+    formatted = mod.format_comment(mock_comment)
+
+    assert formatted[0] == "t1_ghijkl"
+    assert formatted[1] == "comment_user"
+    assert formatted[2] == "This is a test comment."
+    assert formatted[3].year == 2021
+    assert formatted[4] is True
+    assert formatted[5] == 50
+    assert formatted[6] == "t3_abcdef"
+    assert formatted[7] == "t3_abcdef"
+    assert formatted[8] == "r/testsubreddit"
+
+
+def test_format_comment_with_submission_id():
+    mock_comment = MagicMock()
+    mock_comment.name = "t1_ghijkl"
+    mock_comment.author = "comment_user"
+    mock_comment.body = "This is a test comment."
+    mock_comment.created_utc = 1609459300
+    mock_comment.edited = True
+    mock_comment.ups = 50
+    mock_comment.parent_id = "t3_abcdef"
+    mock_comment.link_id = None
+    mock_submission = MagicMock()
+    mock_submission.id = "submission_id"
+    mock_comment.submission = mock_submission
+    mock_comment.subreddit_name_prefixed = "r/testsubreddit"
+
+    formatted = mod.format_comment(mock_comment)
+
+    assert formatted[7] == "submission_id"
