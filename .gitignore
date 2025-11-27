@@ -5,3 +5,4 @@ __pycache__/
 helper_logs/
 .pylintrc
 presentation/data/
+logs/*

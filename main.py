@@ -1,11 +1,13 @@
+import logging
 from utils.prompt import prompt_loop
-from utils.scraping_utils import scrape_subreddit
 
 
 # TODO consider adding -nodb flag to skip database storage
 # TODO consider adding -vis flag to visualize data after scraping
 def main():
-    # scrape_subreddit("cavesofqud", sort="new", limit=3, comments_only=False)
+    logging.basicConfig(
+        filename="logs/logs.txt", level=logging.INFO, encoding="utf-8"
+    )
     prompt_loop()
 
 

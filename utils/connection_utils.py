@@ -4,6 +4,9 @@ from psycopg import sql
 import os
 from contextlib import contextmanager
 from typing import Generator, Callable, Any, TypeVar
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
