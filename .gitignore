@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 helper_logs/
 .pylintrc
+presentation/data/
