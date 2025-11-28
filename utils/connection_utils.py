@@ -22,6 +22,8 @@ def reddit_session() -> Generator[praw.Reddit, None, None]:
     )
     try:
         yield reddit
+    except Exception as e:
+        logger.error("Reddit session error: %s", e)
     finally:
         del reddit
 
@@ -42,6 +44,8 @@ def db_connection(
                 sql.SQL("SET search_path TO {}").format(sql.Identifier(schema))
             )
         yield conn
+    except Exception as e:
+        logger.error("Database connection error: %s", e)
     finally:
         conn.close()
 

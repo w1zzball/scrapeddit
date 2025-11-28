@@ -5,6 +5,7 @@ import sys
 
 # TODO consider adding -nodb flag to skip database storage
 # TODO consider adding -vis flag to visualize data after scraping
+# TODO add debug flag for more verbose logging
 def main():
     logging.basicConfig(
         filename="logs/logs.txt",
