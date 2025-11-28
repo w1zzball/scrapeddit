@@ -1,3 +1,4 @@
+import logging
 from .console import console
 from .connection_utils import with_resources
 
@@ -5,23 +6,24 @@ from .connection_utils import with_resources
     Utils for purely database operations
 """
 
+logger = logging.getLogger(__name__)
+
 
 @with_resources(use_db=True, use_reddit=False)
 def db_execute(conn, sql_str):
     with conn.cursor() as cur:
         try:
             cur.execute(sql_str)
-            # If the statement returned rows, fetch and print them.
-            # Otherwise print how many rows were affected.
+            logger.info("Executed SQL: %s", sql_str)
             if cur.description is not None:
                 rows = cur.fetchall()
                 console.print(rows)
             else:
                 console.print(f"Query OK, {cur.rowcount} rows affected.")
         except Exception as e:
-            # Print a concise psycopg error message instead of
-            # the full traceback.
+            # get psycopg error rather than traceback
             ename = f"{e.__class__.__module__}.{e.__class__.__name__}"
+            logger.error("SQL execution error: %s: %s", ename, e)
             console.print(f"{ename}: {e}")
 
 
@@ -38,9 +40,11 @@ def clear_tables(conn, target: str = "all") -> tuple[int, int]:
     with conn.cursor() as cur:
         if target in ("comments", "all"):
             cur.execute("DELETE FROM comments;")
+            logger.info("Deleted %d rows from comments", cur.rowcount)
             comments_deleted = cur.rowcount
         if target in ("submissions", "all"):
             cur.execute("DELETE FROM submissions;")
+            logger.info("Deleted %d rows from submissions", cur.rowcount)
             submissions_deleted = cur.rowcount
     return submissions_deleted, comments_deleted
 
@@ -63,4 +67,9 @@ def db_get_redditors_from_subreddit(
         )
         res = cur.fetchall()
     redditors = [row[0] for row in res]
+    logger.info(
+        "Fetched %d redditors from subreddit %s",
+        len(redditors),
+        subreddit_name,
+    )
     return redditors
