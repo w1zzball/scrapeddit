@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
+import logging
 from typing import Any
 from .connection_utils import with_resources
 from .console import console
 
 """Utils for pure Reddit operations."""
+
+logger = logging.getLogger(__name__)
 
 
 def format_submission(submission: Any) -> dict[str, str | int | float | bool]:
@@ -27,9 +30,19 @@ def format_submission(submission: Any) -> dict[str, str | int | float | bool]:
 @with_resources(use_reddit=True, use_db=False)
 def get_submission(reddit, post_id=None, post_url=None):
     if post_id:
-        submission = reddit.submission(id=post_id)
+        try:
+            submission = reddit.submission(id=post_id)
+        except Exception as e:
+            logger.error("Error fetching submission by ID %s: %s", post_id, e)
+            return None
     elif post_url:
-        submission = reddit.submission(url=post_url)
+        try:
+            submission = reddit.submission(url=post_url)
+        except Exception as e:
+            logger.error(
+                "Error fetching submission by URL %s: %s", post_url, e
+            )
+            return None
     else:
         raise ValueError("Either post_id or post_url must be provided.")
     return submission
@@ -40,7 +53,11 @@ def get_comment(reddit, comment_id: str) -> Any:
     """
     Get a single comment by its ID.
     """
-    comment = reddit.comment(comment_id)
+    try:
+        comment = reddit.comment(comment_id)
+    except Exception as e:
+        logger.error("Error fetching comment by ID %s: %s", comment_id, e)
+        return None
     return comment
 
 
@@ -73,10 +90,18 @@ def get_comments_in_thread(
     threshold=0,
 ) -> list[Any]:
     """Get all comments in a thread, returns a CommentForest object."""
-    submission = get_submission(post_id, post_url)
+    try:
+        submission = get_submission(post_id, post_url)
+    except Exception as e:
+        logger.error("Error fetching submission: %s", e)
+        return []
     comments = submission.comments
     # with console.status("Fetching comments...", spinner="dots"):
-    comments.replace_more(limit=limit, threshold=threshold)
+    try:
+        comments.replace_more(limit=limit, threshold=threshold)
+    except Exception as e:
+        logger.error("Error replacing more comments: %s", e)
+        return []
     return comments.list()
 
 
@@ -87,12 +112,29 @@ def get_redditors_comments(
     """
     Get all comments made by a specific user.
     """
-    redditor = reddit.redditor(user_id)
+    try:
+        redditor = reddit.redditor(user_id)
+    except Exception as e:
+        logger.error("Error fetching redditor by ID %s: %s", user_id, e)
+        return []
     if sort == "new":
-        return redditor.comments.new(limit=limit)
+        try:
+            return redditor.comments.new(limit=limit)
+        except Exception as e:
+            logger.error(
+                "Error fetching new comments for redditor %s: %s", user_id, e
+            )
+            return []
     elif sort == "top":
-        return redditor.comments.top(limit=limit)
+        try:
+            return redditor.comments.top(limit=limit)
+        except Exception as e:
+            logger.error(
+                "Error fetching top comments for redditor %s: %s", user_id, e
+            )
+            return []
     else:
+        logger.error("Get redditor comments- unknown sort order: %s", sort)
         raise ValueError(f"Unknown sort order: {sort}")
 
 
@@ -101,7 +143,11 @@ def get_redditors_from_subreddit(
     reddit, subreddit_name: str, limit: int = 100, sort: str = "new"
 ):
     """Given a subreddit fetch redditors with comments on that subreddit"""
-    sub = reddit.subreddit(subreddit_name)
+    try:
+        sub = reddit.subreddit(subreddit_name)
+    except Exception as e:
+        logger.error("Error fetching subreddit %s: %s", subreddit_name, e)
+        return []
     sorter = sort.lower()
     fetchers = {
         "new": sub.new,
@@ -110,7 +156,15 @@ def get_redditors_from_subreddit(
         "rising": sub.rising,
         "controversial": sub.controversial,
     }
-    iterator = fetchers.get(sorter, sub.new)(limit=limit)
+    try:
+        iterator = fetchers.get(sorter, sub.new)(limit=limit)
+    except Exception as e:
+        logger.error(
+            "Error fetching submissions from subreddit %s: %s",
+            subreddit_name,
+            e,
+        )
+        return []
     submissions = list(iterator)
     if not submissions:
         console.print("No submissions found.")
