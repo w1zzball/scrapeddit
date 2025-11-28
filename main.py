@@ -11,7 +11,10 @@ def main():
         filename="logs/logs.txt",
         level=logging.INFO,
         encoding="utf-8",
-        format="%(name)s - %(funcName)s - %(asctime)s - %(levelname)s - %(message)s",
+        format=(
+            "%(name)s - %(funcName)s - %(asctime)s - "
+            "%(levelname)s - %(message)s"
+        ),
     )
     logger = logging.getLogger(__name__)
     logger.info("started with args: %s", sys.argv[1:])

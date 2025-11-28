@@ -132,6 +132,7 @@ def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
         console.print("No change to comment (conflict and skipped)")
 
 
+# TODO add more progress info
 @with_resources(use_reddit=False, use_db=True)
 def scrape_comments_in_thread(
     conn,
@@ -541,7 +542,8 @@ def scrape_redditor(
     formatted_rows = [format_comment(c) for c in comments]
     # TODO factor out common insertion code as it is used multiple times
     logger.info(
-        f"Inserting {len(formatted_rows)} comments for u/{user_id} into the database."
+        f"Inserting {len(formatted_rows)} comments for "
+        f"u/{user_id} into the database."
     )
     with conn.cursor() as cur:
         cols = (
