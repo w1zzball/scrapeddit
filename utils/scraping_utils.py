@@ -1,3 +1,4 @@
+import logging
 from .console import console
 from .reddit_utils import (
     get_submission,
@@ -13,6 +14,9 @@ import time
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .state import subreddit_progress
+
+logger = logging.getLogger(__name__)
+
 
 """Utils for scraping Reddit and inserting into DB."""
 
@@ -32,7 +36,12 @@ def scrape_submission(
 
     If overwrite is True, existing rows will be updated on conflict.
     """
+    logger.info(
+        f"Scraping submission {post_id} / {post_url} | overwrite={overwrite}"
+    )
+    logger.info("extracting submission data...")
     submission = get_submission(post_id, post_url)
+    logger.info("transforming submission data...")
     submission = format_submission(submission)
     cols = (
         "(name, author, title, selftext, url, created_utc, "
@@ -55,7 +64,7 @@ def scrape_submission(
         )
     else:
         conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
-
+    logger.info("loading submission data into DB...")
     with conn.cursor() as cur:
         cur.execute(
             f"""
@@ -84,7 +93,10 @@ def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
 
     If overwrite=True update on conflict.
     """
+    logger.info(f"Scraping comment {comment_id} | overwrite={overwrite}")
+    logger.info("extracting comment data...")
     comment = get_comment(comment_id)  # type: ignore
+    logger.info("transforming comment data...")
     formatted_comment = format_comment(comment)
     cols = (
         "(name, author, body, created_utc, edited, ups, "
@@ -103,6 +115,7 @@ def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
     else:
         conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
 
+    logger.info("loading comment data into DB...")
     with conn.cursor() as cur:
         cur.execute(
             f"""
@@ -133,6 +146,11 @@ def scrape_comments_in_thread(
 
     If overwrite=True, existing comments will be updated.
     """
+    logger.info(
+        f"Scraping comments in thread {post_id} / {post_url} "
+        f"| overwrite={overwrite}"
+    )
+    logger.info("extracting comments data...")
     comments = get_comments_in_thread(
         post_id=post_id,
         post_url=post_url,
@@ -140,13 +158,14 @@ def scrape_comments_in_thread(
         threshold=threshold,
     )
     total = len(comments)
-
+    logger.info(f"transforming {total} comments data...")
     cols = (
         "(name, author, body, created_utc, edited, ups, "
         "parent_id, submission_id, subreddit)"
     )
     placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
 
+    logger.info("loading comments data into DB...")
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -256,6 +275,10 @@ def scrape_entire_thread(
     index: int | None = None,
     **kwargs,
 ):
+    logger.info(
+        f"Scraping entire thread {post_id} / {post_url} | "
+        f"overwrite={overwrite}"
+    )
     with console.status("Scraping submission...", spinner="dots"):
         scrape_submission(
             post_id=post_id,
@@ -289,7 +312,14 @@ def scrape_subreddit(
     **kwargs,
 ):
     """Scrape submissions and comments from a subreddit."""
+    logger.info(
+        f"Scraping subreddit {subreddit_name} | sort={sort} | limit={limit} "
+        f"| overwrite={overwrite} | subs_only={subs_only} | "
+        f"comments_only={comments_only} | max_workers={max_workers}"
+        f" | skip_existing={skip_existing}"
+    )
     start_time = time.perf_counter()
+    logger.info(f"extracting submissions from r/{subreddit_name}...")
     sub = reddit.subreddit(subreddit_name)
     sorter = sort.lower()
     fetchers = {
@@ -327,6 +357,7 @@ def scrape_subreddit(
 
     # insert formatted submissions batch
     if not comments_only:
+        logger.info("transforming submissions data...")
         formatted_rows = [
             tuple(format_submission(s).values()) for s in submissions
         ]
@@ -358,7 +389,7 @@ def scrape_subreddit(
             "INSERT INTO submissions (" + columns_str + ")\n"
             "VALUES (" + placeholders + ")\n" + conflict_clause
         )
-
+        logger.info("loading submissions data into DB...")
         with conn.cursor() as cur:
             cur.executemany(sql_stmt, formatted_rows)
         conn.commit()
@@ -393,6 +424,10 @@ def scrape_subreddit(
                 )
                 return (new, updated, skipped, submission.id), None
             except Exception as e:
+                logger.error(
+                    f"Error scraping comments for submission "
+                    f"{submission.id}: {e}"
+                )
                 return (0, 0, 0, submission.id), str(e)
 
         # progress state for toolbar
@@ -492,14 +527,22 @@ def scrape_redditor(
     """
     Given a redditor, scrape the last n (default: 100) comments they made
     """
+    logger.info(
+        f"Scraping comments for u/{user_id} | limit={limit} "
+        f"| overwrite={overwrite} | sort={sort}"
+    )
     print(f"Scraping comments for u/{user_id}...")
     try:
         comments = get_redditors_comments(user_id, limit, sort=sort)
     except Exception as e:
+        logger.error(f"Error scraping u/{user_id}: {e}")
         console.print(f"[red]Error scraping u/{user_id}: {e}[/red]")
         return
     formatted_rows = [format_comment(c) for c in comments]
     # TODO factor out common insertion code as it is used multiple times
+    logger.info(
+        f"Inserting {len(formatted_rows)} comments for u/{user_id} into the database."
+    )
     with conn.cursor() as cur:
         cols = (
             "(name, author, body, created_utc, edited, ups, "
@@ -535,6 +578,10 @@ def scrape_redditors(
     """
     Given a list of redditors, scrape the last n comments they made
     """
+    logger.info(
+        f"Scraping comments for {len(redditors)} redditors | limit={limit} "
+        f"| overwrite={overwrite} | sort={sort}"
+    )
     for redditor in redditors:
         try:
             console.print(f"Scraping redditor: u/{redditor}")
@@ -552,6 +599,7 @@ def scrape_redditors(
 def expand_redditors_comments(conn, threshold, limit, max_workers=5, **kwargs):
     """get more comments from redditors in the
     database with less than threshold comments"""
+    logger.info(f"Expanding redditors with less than {threshold} comments ")
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -614,6 +662,11 @@ def recursively_scrape_redditors_for_subreddit(
     subreddit found in those comments, repeat
     """
 
+    logger.info(
+        f"Recursively scraping redditors for subreddit r/{subreddit} "
+        f"| comment_limit={comment_limit} | redditor_limit={redditor_limit} "
+        f"| overwrite={overwrite} | sort={sort} | depth={depth}"
+    )
     redditors = get_redditors_from_subreddit(subreddit, limit=redditor_limit)
     scraped_subreddits.append(subreddit)
     redditors = [r for r in redditors if r not in scraped_redditors]
