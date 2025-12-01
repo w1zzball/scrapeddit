@@ -9,6 +9,9 @@ rows from the DB.
 - Scrape a single submission, comment, or entire thread (submission + comments).
 - Scrape many submissions from a subreddit with optional comment scraping and
 	concurrency.
+- Scrape submissions from redditors
+- Expand redditors with less than a specified number of comments in the database.
+- Recursively scrape comments from subreddits
 - Store scraped data in PostgreSQL (two schemas/tables: `submissions` and `comments`).
 - Interactive prompt with history, autocompletion and a `help` command describing
 	flags and usage.
@@ -48,6 +51,20 @@ All commands are run inside the interactive prompt (`py main.py`).
 		- --overwrite, -o     Update existing rows on conflict.
 		- --skip-existing, -s Skip submissions already present in DB.
 		- --exit-after        Exit the interactive prompt after the scrape completes.
+
+- scrape redditor <username> [flags]
+	- Scrape many submissions from a redditor.
+	- Flags:
+		- --sort <new|hot|top|rising|controversial> (default: new)
+		- --limit N           Number of submissions to fetch (default 100 when omitted).
+		- --overwrite, -o     Update existing rows on conflict.
+
+- expand
+	- Expand redditors with less than a specified number of comments in the DB.
+	- Flags:
+		- --threshold N       Maximum number of comments a redditor must have in the DB
+		- --limit N 		 Number of comments to fetch per redditor (default 100).
+		- --max-workers N, -w Concurrency level for comment scraping (default 5).
 
 - delete <submissions|comments|all>
 	- Delete rows from one or both tables. This command prompts for a confirmation
