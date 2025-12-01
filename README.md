@@ -19,6 +19,7 @@ rows from the DB.
 ## Commands
 
 All commands are run inside the interactive prompt (`py main.py`).
+All commands support `--exit-after` to exit the prompt after completion.
 
 - scrape thread <id|url> [flags]
 	- Scrape a submission and all comments.
@@ -27,19 +28,19 @@ All commands are run inside the interactive prompt (`py main.py`).
 													no limit.
 		- --threshold N       replace_more threshold (default 0).
 		- --overwrite, -o     Update existing rows on conflict.
-		- --exit-after        Exit the interactive prompt after the scrape completes.
+
 
 - scrape submission <id|url> [--overwrite|-o]
 	- Scrape only the submission (no comments).
 	- Flags:
 		- --overwrite, -o     Update existing rows on conflict.
-		- --exit-after        Exit the interactive prompt after the scrape completes.
+
 
 - scrape comment <comment_id> [--overwrite|-o]
 	- Scrape a single comment by ID.
 	- Flags:
 		- --overwrite, -o     Update existing rows on conflict.
-		- --exit-after        Exit the interactive prompt after the scrape completes.
+
 
 - scrape subreddit <name> [flags]
 	- Scrape many submissions from a subreddit.
@@ -50,7 +51,7 @@ All commands are run inside the interactive prompt (`py main.py`).
 		- --max-workers N, -w Concurrency level for comment scraping (default 5).
 		- --overwrite, -o     Update existing rows on conflict.
 		- --skip-existing, -s Skip submissions already present in DB.
-		- --exit-after        Exit the interactive prompt after the scrape completes.
+
 
 - scrape redditor <username> [flags]
 	- Scrape many submissions from a redditor.
