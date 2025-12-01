@@ -227,8 +227,8 @@ def prompt_loop():
                             max_workers=max_workers,
                             skip_existing=skip_existing,
                         )
-                    if exit_after:
-                        break
+                if exit_after:
+                    break
             # delete command
             elif user_input.startswith("delete ") or user_input == "delete":
                 tokens = shlex.split(user_input)
