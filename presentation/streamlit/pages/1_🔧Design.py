@@ -123,6 +123,18 @@ st.markdown(
 """
 )
 
+st.warning(
+    """
+    Reddit uses a dynamic throttling/request limit policy which means the 
+    amount or GET requests a post can accept varies dependant on the 
+    post's popularity. The upshot of this is that trying to scrape the top
+    posts of very popular subreddits often results in a http 429 error, meaning too 
+    many requests have been made on that resource recently. There is seemingly no 
+    workaround for this, and to avoid bottlenecks the program simply logs it 
+    and continues.
+"""
+)
+
 st.divider()
 
 st.markdown(
