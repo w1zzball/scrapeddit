@@ -1,0 +1,124 @@
+import streamlit as st
+
+st.header("Design")
+
+st.markdown(
+    """
+    As the PRAW API exposes the full comment thread from a submission
+    object by means of a `replace_more()` method, which populates a
+    comment tree scraping entire threads becomes a matter of getting
+      a submission and following along the comments. As PRAW also allows
+    for getting the top **N** submissions from a subreddit this
+    could easily be extended to scraping entire subreddits.
+    """
+)
+
+# UX/UI
+
+st.markdown(
+    """
+    ### UX/UI   
+    Given the breath of choice available in terms of both the granularity and
+    sheer amount of data available on reddit. I opted to build a tool
+    which gave the user control over what to extract.
+    To this end I created a command line interface employing the
+    `prompt_toolkit` library,
+    """
+)
+
+st.success(
+    """this library also allows for nice
+    quality of life features like history and autocomplete
+    for free.
+    """
+)
+
+with st.container(horizontal_alignment="center"):
+    st.image("presentation/assets/prompt_toolkit_features.png")
+
+st.divider()
+
+# parallelism
+st.markdown(
+    """
+    ### Parallelism   
+"""
+)
+st.warning(
+    """initially the reddit API was called sequentially,
+         each Get request having to wait for the previous to complete
+        this resulted in long extraction times"""
+)
+
+st.markdown(
+    """
+    The sequential extraction was replaced by a multithreaded approach
+    where a number of requests were dispatched at once. The number of 'workers'
+    being supplied by the user (defaulting to 5)
+    """
+)
+
+st.markdown(
+    """
+    The extracted data is transformed, removing unnecessary information
+      such as duplicate or derived fields, unnecessary or volatile statistics
+      (e.g. the post's controversiality). Before being loaded into a remote
+     database hosted by [Aiven](https://aiven.io/)
+    """,
+    unsafe_allow_html=True,
+)
+
+with st.expander("A cautionary tale"):
+    st.markdown(
+        """
+        after achieving a double digit times speedup with parrelelism I left the extraction
+        running overnight scraping the top 1000 threads in the top 1000
+         subreddits upon waking the next morning I had a respectable 2.3 Million comments/submissions scraped.
+           
+        then I opened my email
+    """
+    )
+    st.image("presentation/assets/server_low_on_space.png")
+    st.image("presentation/assets/server_in_read_only_mode.png")
+    st.image("presentation/assets/server_deleted.png")
+
+st.divider()
+# invocation
+
+st.markdown(
+    """
+    ### Automation   
+    To enable automation the program can recieve arguments from the command line rather
+      than through the prompt, this along with a wrapper program allows for bulk scraping
+      with the ability to pause and resume scrapes via lists of scraped / to scrape subreddits.     
+"""
+)
+
+st.success(
+    """
+    Any arguments after the file are passed directly to the prompt
+      handler as if user input so no extra logic is necessary.
+      """
+)
+
+st.markdown(
+    """
+      ```python
+      if len(sys.argv) < 2 or cli_input_executed:
+                user_input = session.prompt(
+                    "scrapeddit> ",
+                    bottom_toolbar=bottom_toolbar,
+                    auto_suggest=AutoSuggestFromHistory(),
+                    wrap_lines=True,
+                ).strip()
+                if not user_input:
+                    continue
+            else:
+                # CLI invocation
+                user_input = " ".join(sys.argv[1:]).strip()
+                cli_input_executed = True
+                if not user_input:
+                    continue
+      ```
+"""
+)
