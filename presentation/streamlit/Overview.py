@@ -1,4 +1,3 @@
-import pandas as pd
 import streamlit as st
 
 st.markdown(
@@ -6,14 +5,15 @@ st.markdown(
 )
 
 with st.sidebar.container():
-    st.success("Highlights in Green")
-    st.warning("Roadblocks in Yellow")
-    st.expander("Asides in Accordions")
+    with st.expander("how to read"):
+        st.success("Highlights in Green")
+        st.warning("Roadblocks in Yellow")
+        st.expander("Asides in Accordions")
 
 st.header("About Scrapeddit")
 st.markdown(
     """An ETL suite for reddit scraping. Proving a range of tools to
-gather data in bulk. Supports scraping 
+gather data in bulk. Supports scraping-
 - Single Comments
 - Single Submissions (Original posts of a thread)
 - Entire Threads
