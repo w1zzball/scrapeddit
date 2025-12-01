@@ -122,3 +122,53 @@ st.markdown(
       ```
 """
 )
+
+st.divider()
+
+st.markdown(
+    """
+    ### Modularity   
+    Because of the multiple different types of extraction 
+    the tool supports and the similar nature of arguments they 
+    take, the tool uses a modular approach to parsing and calling functions
+    most functions are read from a supporting datastructure which 
+    defines both their prompt characteristics (help text etc) and their arguments. 
+"""
+)
+
+st.success("This makes creating and updating functions much simpler")
+
+st.markdown(
+    """
+    ```json
+    prompt_data = {
+    "scrape": {
+        "base": {
+            "targets": (),
+            "desc": (
+                "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>\\n"
+                " [--overwrite|-o] [--limit N] "
+                "[--threshold N] [--max-workers N]"
+            ),
+            "func": None,
+        },
+        "error": {
+            "targets": (),
+            "desc": (
+                "Error: Invalid scrape command. "
+                "Unknown scrape target. Use thread, submission, "
+                "comment, redditor or subreddit"
+            ),
+            "func": None,
+        },
+        "thread": {
+            "targets": ("thread", "t", "entire", "entire_thread"),
+            "desc": (
+                "thread: scrape submission + comments. Flags: \\n"
+                "--overwrite/-o, --limit N (None=all), --threshold N"
+            ),
+            "func": scrape_entire_thread,
+        },
+    ```
+"""
+)
