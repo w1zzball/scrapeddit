@@ -9,7 +9,6 @@ from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import NestedCompleter
 from .state import subreddit_progress
-from .db_utils import db_execute, clear_tables
 from .console import console
 from .prompt_help_text import prompt_data
 
