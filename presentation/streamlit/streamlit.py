@@ -23,8 +23,15 @@ with st.expander("What is reddit"):
 
 with st.expander("Inception"):
     st.write(
-        """To get reacquainted with APIs I decided to write a reddit bot which
-         would listen for mentions, take the comment mentioning it and
-        evaluate the comment as python code,
-        then return the result as a reply"""
+        """To get reacquainted with APIs I decided to write a reddit
+        REPL bot which would listen for mentions, take the comment
+        mentioning it and evaluate the comment as code (*in a sandboxed
+        environment*), then return the result as a reply"""
+    )
+    st.markdown(
+        """
+        After originally using the vanilla reddit API with the python response
+        library, I discovered a more fully featured python library for the
+        reddit API, **PRAW** which presents reddit data as objects.
+        """
     )
