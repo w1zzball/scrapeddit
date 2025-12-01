@@ -1,17 +1,36 @@
 import pandas as pd
 import streamlit as st
 
-st.title("Scrapeddit")
+st.markdown(
+    '<h1 style="color:#FF4500"><b>Scrapeddit</b></h1>', unsafe_allow_html=True
+)
 
-st.sidebar.success("select a page")
+with st.sidebar.container():
+    st.success("Highlights in Green")
+    st.warning("Roadblocks in Yellow")
+    st.expander("Asides in Accordions")
 
-st.header("Scrapeddit")
-st.write("An ETL suite for reddit scraping.")
+st.header("About Scrapeddit")
+st.markdown(
+    """An ETL suite for reddit scraping. Proving a range of tools to
+gather data in bulk. Supports scraping 
+- Single Comments
+- Single Submissions (Original posts of a thread)
+- Entire Threads
+- Entire Subreddits
+- Redditors comment history
+- and more...
+"""
+)
 
-with st.expander("What is reddit"):
-    st.write(
-        """Reddit is a social media site / forum where users can submit text,
-         videos, photos and links which other users can comment and vote on"""
+with st.expander("What is Reddit"):
+    st.markdown(
+        """[Reddit](https://www.reddit.com) is a social media site / forum where users can submit text,
+         videos, photos and links which other users can comment and vote on.
+         Because of Reddits huge userbase (443.8 million weekly active users)
+         It provides a wealth of data for analysis and there already exist 
+         well developed API tools to assist with data extraction.
+         """
     )
     st.markdown("### Types of data available")
     st.markdown(
