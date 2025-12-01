@@ -49,6 +49,9 @@ with st.expander("Inception"):
         mentioning it and evaluate the comment as code (*in a sandboxed
         environment*), then return the result as a reply"""
     )
+    with st.container(horizontal=True):
+        st.image("presentation/assets/bot1.png", width=300)
+        st.image("presentation/assets/bot2.png", width=300)
     st.markdown(
         """
         After originally using the vanilla reddit API with the python response
