@@ -18,7 +18,7 @@ st.markdown(
 st.markdown(
     """
     ### UX/UI   
-    Given the breath of choice available in terms of both the granularity and
+    Given the breadth of choice available in terms of both the granularity and
     sheer amount of data available on reddit. I opted to build a tool
     which gave the user control over what to extract.
     To this end I created a command line interface employing the
