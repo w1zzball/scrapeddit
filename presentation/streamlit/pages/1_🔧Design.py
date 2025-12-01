@@ -172,3 +172,44 @@ st.markdown(
     ```
 """
 )
+
+st.divider()
+
+st.markdown(
+    """
+    ### Schema Design
+"""
+)
+
+
+st.markdown(
+    """
+    #### Comments
+
+|Column|Type|Constraints|Default|Description|
+|---|---|---|---|---|
+|`name`|TEXT|PRIMARY KEY|–|Fully-qualified Reddit ID (e.g., `t1_nn428xe`)|
+|`author`|TEXT||–|Comment author username|
+|`body`|TEXT||–|Plain text body of the comment|
+|`created_utc`|TIMESTAMPTZ|NOT NULL|–|UTC timestamp of creation|
+|`edited`|BOOLEAN||FALSE|Whether the comment was edited|
+|`ups`|INT||0|Upvote count|
+|`parent_id`|TEXT||–|ID of the parent comment or submission|
+|`submission_id`|TEXT|NOT NULL|–|ID of the submission this comment belongs to|
+|`subreddit`|TEXT|NOT NULL|–|Name of the subreddit|
+#### Submissions (original post of the thread)
+| Column        | Type        | Constraints | Default | Description                             |
+| ------------- | ----------- | ----------- | ------- | --------------------------------------- |
+| `name`        | TEXT        | PRIMARY KEY | –       | Reddit ID (e.g., `t3_abcd123`)          |
+| `author`      | TEXT        |             | –       | Submission author username              |
+| `title`       | TEXT        |             | –       | Title of the submission                 |
+| `selftext`    | TEXT        |             | –       | Submission body (for text posts)        |
+| `url`         | TEXT        |             | –       | URL (for link posts)                    |
+| `created_utc` | TIMESTAMPTZ | NOT NULL    | –       | UTC timestamp of creation               |
+| `edited`      | BOOLEAN     |             | FALSE   | Whether the submission was edited       |
+| `ups`         | INT         |             | 0       | Upvote count                            |
+| `subreddit`   | TEXT        | NOT NULL    | –       | Name of the subreddit                   |
+| `permalink`   | TEXT        | NOT NULL    | –       | Permanent Reddit URL for the submission |
+
+"""
+)
