@@ -23,7 +23,11 @@ def prompt_loop():
     # Autocompletion for top-level commands and scrape targets.
     completer = NestedCompleter.from_nested_dict(
         {
-            "scrape": {func for func in prompt_data["scrape"].keys()},
+            "scrape": {
+                func
+                for func in prompt_data["scrape"].keys()
+                if func not in ("error", "base")
+            },
             "delete": {
                 targets for targets in prompt_data["delete"]["targets"].keys()
             },
