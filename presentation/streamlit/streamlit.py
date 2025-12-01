@@ -3,8 +3,10 @@ import streamlit as st
 
 st.title("Scrapeddit")
 
+st.sidebar.success("select a page")
+
 st.header("Scrapeddit")
-st.write("A tool for bulk reddit scraping.")
+st.write("An ETL suite for reddit scraping.")
 
 with st.expander("What is reddit"):
     st.write(
