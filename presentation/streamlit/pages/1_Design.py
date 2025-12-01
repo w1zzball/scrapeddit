@@ -11,3 +11,11 @@ st.markdown(
     to scraping entire subreddits.
     """
 )
+
+st.markdown(
+    """
+    Given the breath of choice available in terms of both the granularity and
+    sheer amount of data available on reddit. I opted to build a terminal
+    interface which gave the user control over what to extract.
+    """
+)
