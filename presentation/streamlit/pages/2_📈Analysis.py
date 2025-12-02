@@ -50,7 +50,7 @@ st.divider()
 st.markdown(
     """
     ## Transformation
-    ### Goal - A table consisting of a column of subreddit pairs and a column of their shared commenter count.
+    #### Goal - A table consisting of a column of subreddit pairs and a column of their shared commenter count.
     
     To get a measure of who commented where I used the postgrest function `string_agg` to produce a comma separated
     list of subreddits a user had commented in.
@@ -121,7 +121,55 @@ st.markdown(
     """
     ## Network Analysis
 
-    The form of the data lends itself to analysis as a network graph. The graph data was made using networkx
-    first the cleaned  
+    The form of the data lends itself to analysis as a network graph. The graph data was made using networkx (**nx**).
+    first the edge weight data was loaded into a pd dataframe and then transformed for pythonic transformation  
+
+    ```python
+    edge_df = pd.read_csv('../data/subreddit_edge_weights_cleaned_filtered.csv')
+    unformatted_edges = edge_df.values.tolist()
+    edges = []
+    for pair_str, weight in unformatted_edges:
+        subpair = tuple(pair_str.strip("()").replace("'", "").split(", "))
+        edges.append((subpair, weight))
+    ```
+
+    ```python
+    G = nx.Graph()
+    G.add_nodes_from(subs)
+    for (sub1,sub2), weight in edges:
+        G.add_edge(sub1, sub2, weight=weight)
+    ```
+    """
+)
+with st.container(horizontal=True):
+    st.metric(label="Nodes", value="7,889")
+    st.metric(label="Edges", value="117,351")
+
+st.markdown(
+    """
+    The data was then enriched by adding a 'comment_count' atribute to each node,
+      reflecting how many total comments the subreddit had.
+    ```python
+    for subreddit, count in comment_count_dict.items():
+        if subreddit in G.nodes():
+            G.nodes[subreddit]['comment_count'] = int(count)
+    ```
+    finally the data was written to a graph format   
+    ```python
+    nx.write_gexf(G, '../data/subreddit_network.gexf')
+    ```
 """
 )
+
+with st.expander("Don't do big data on a potato"):
+    st.markdown(
+        """
+    I had initially planned to do the graph analysis natively through streamlit, but after researching
+    I discovered streamlit's graphing functionality was somewhat limited for larger graphs.
+
+    At first I opted to use the python pyvis module, which actually uses javascript for the visualisation. But 
+    pyvis immediately ran into difficulties with memory...
+    """
+    )
+    st.image("presentation/assets/pyvis_time.png")
+    st.image("presentation/assets/pyvis_time_big.png", width=500)
