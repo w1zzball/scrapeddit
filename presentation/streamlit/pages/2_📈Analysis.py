@@ -5,9 +5,10 @@ from streamlit_image_zoom import image_zoom
 from PIL import Image
 
 
+# @st.dialog("zoomable")
 def zoomable(img_path):
     image = Image.open(img_path)
-    return image_zoom(image, keep_resolution=True, mode="dragmove", size=1024)
+    return image_zoom(image, keep_resolution=True, mode="dragmove", size=704)
 
 
 st.header("Analysis")
@@ -228,7 +229,7 @@ if "show_p2_labels" not in st.session_state:
 
 if st.button("Toggle labels", key="p2"):
     st.session_state.show_p2_labels = not st.session_state.show_p2_labels
-st.image(partition2_whole_images[st.session_state.show_p2_labels == True])
+zoomable(partition2_whole_images[st.session_state.show_p2_labels == True])
 
 # treemap data
 
@@ -263,9 +264,62 @@ fig = px.treemap(
     color_discrete_map=custom_colours,
 )
 fig.update_traces(textinfo="label+value")
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig)
 
-zoomable("presentation/assets/graphs/partition2/cats_1_largefont.png")
+cats, general, anime, gaming, tv = st.tabs(community_data["category"][:-1])
+
+with cats:
+    st.markdown(
+        """
+    This community is dominated by subreddits about cats, pets, fashion and home improvement.
+    Dominated by cat themed subreddits, with a large contingent of home decor and fashion 
+    subreddits. With some gaming subreddits creeping upwards towards the larger gaming community.
+    """
+    )
+    zoomable("presentation/assets/graphs/partition2/cats_1_largefont.png")
+
+with general:
+    st.markdown(
+        """
+    This community is made up of general interest and question/answer subreddits.
+    The generality of this community is shown by it's large spread and central location.
+    It also has subsections e.g. writing questions and gendered subreddits
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/general_ask_15_largefont.png"
+    )
+
+with anime:
+    st.markdown(
+        """
+    This community is dominated by subreddits about anime, memes and youth culture.
+    The lower left portion being
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/anime_memes_youth_17_largefont.png"
+    )
+
+with gaming:
+    st.markdown(
+        """
+    This community is dominated by gaming subreddits.
+    
+    """
+    )
+    zoomable("presentation/assets/graphs/partition2/gaming_11_largefont.png")
+
+with tv:
+    st.markdown(
+        """
+    This community is dominated by subreddits about TV, film, fantasy and sports.
+    
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/film_sports_fantasy_30_extralargefont.png"
+    )
 
 st.markdown(
     """
