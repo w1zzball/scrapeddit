@@ -179,5 +179,21 @@ st.divider()
 st.markdown(
     """
     The graph was imported into the open source network analysis software [Gephi](https://gephi.org/)
+
+    The graph was then allowed to expand within constraints defined by the edge weights using gephi's
+    ForceAtlas2 algorithm until it had settled. After which a community detection algorithm was run to 
+    partition the graph's topology into 'communities'. This is what the first analysis produced. 
 """
+)
+
+st.success(
+    """
+    
+"""
+)
+
+
+is_labled = st.button("toggle labels")
+st.image(
+    f"presentation/assets/graphs/whole_graph_{'no' if is_labled else ''}labels.png"
 )
