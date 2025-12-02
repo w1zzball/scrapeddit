@@ -278,6 +278,12 @@ fig = px.treemap(
 fig.update_traces(textinfo="label+value")
 st.plotly_chart(fig)
 
+st.success(
+    """
+    The smallest community contained just 2 Indonesian forums!
+"""
+)
+
 cats, general, anime, gaming, tv = st.tabs(community_data["category"][:-1])
 
 with cats:
