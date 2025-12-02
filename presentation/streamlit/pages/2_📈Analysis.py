@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 st.header("Analysis")
 
@@ -193,15 +194,55 @@ st.success(
 """
 )
 
+with st.expander("first attempt"):
+    if "show_labels" not in st.session_state:
+        st.session_state.show_labels = True
 
-if "show_labels" not in st.session_state:
-    st.session_state.show_labels = True
+    if st.button("Toggle labels"):
+        st.session_state.show_labels = not st.session_state.show_labels
 
-if st.button("Toggle labels"):
-    st.session_state.show_labels = not st.session_state.show_labels
+    filename = f"presentation/assets/graphs/whole_graph_{'no' if not st.session_state.show_labels else ''}labels.png"
+    st.image(filename)
 
-filename = f"presentation/assets/graphs/whole_graph_{'no' if not st.session_state.show_labels else ''}labels.png"
-st.image(filename)
+st.markdown(
+    """
+    after experimenting with partition parameters I found settings which split the data into a 
+    few large communities with dominant themes.
+"""
+)
+
+community_data = {
+    "category": [
+        "Cats, Pets, Home",
+        "General, Q/A",
+        "Anime, Memes, Youth",
+        "Gaming",
+        "TV / Film / Fantasy / Sports",
+        "Other communities",
+    ],
+    "proportion of subreddits": [36.29, 14.2, 8.78, 4.76, 3.49, 32.48],
+}
+
+community_df = pd.DataFrame(community_data)
+
+custom_colours = {
+    "Cats, Pets, Home": "#00FFFF",
+    "General, Q/A": "#FF741E",
+    "Anime, Memes, Youth": "#25FE00",
+    "Gaming": "#FF97FF",
+    "TV / Film / Fantasy / Sports": "#FCFF32",
+    "Other communities": "#999999",
+}
+
+fig = px.treemap(
+    community_df,
+    path=["category"],
+    values="proportion of subreddits",
+    color="category",
+    color_discrete_map=custom_colours,
+)
+fig.update_traces(textinfo="label+value")
+st.plotly_chart(fig, use_container_width=True)
 
 
 st.markdown(
@@ -214,3 +255,40 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+
+# st.markdown(
+#     """
+# <style>
+#     .rounded-box {
+#         border: 2px solid #4CAF50;
+#         border-radius: 15px;
+#         padding: 10px;
+#     }
+#     #box-containers {
+#         display: flex;
+#         gap: 20px;
+#         margin-top: 20px;
+#     }
+#     #cat-box {
+#         background-color: #00FFFF;
+#         height: 363px;
+#     }
+#     #general-box {
+#         background-color: #FFB6C1;
+#         height: 363px;
+# }
+# </style>
+
+# """,
+#     unsafe_allow_html=True,
+# )
+
+# st.markdown(
+#     """
+#     <div id="box-containers">
+# <div id="cat-box" class="rounded-box">
+# </div>
+# """,
+#     unsafe_allow_html=True,
+# )
