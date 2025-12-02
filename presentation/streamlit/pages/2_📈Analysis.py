@@ -180,20 +180,37 @@ st.markdown(
     """
     The graph was imported into the open source network analysis software [Gephi](https://gephi.org/)
 
-    The graph was then allowed to expand within constraints defined by the edge weights using gephi's
-    ForceAtlas2 algorithm until it had settled. After which a community detection algorithm was run to 
+    The graph trimmed to exclude nodes with under 200 comments and then allowed to expand within
+    constraints defined by the edge weights using gephi's
+    ForceAtlas2 algorithm until it had settled. After which a community detection algorithm <a href=#footer>[1]</a> was run to 
     partition the graph's topology into 'communities'. This is what the first analysis produced. 
-"""
+""",
+    unsafe_allow_html=True,
 )
-
 st.success(
     """
-    
+    The data included many Isolated/niche communities, 13% of nodes make up 50% of all edges
 """
 )
 
 
-is_labled = st.button("toggle labels")
-st.image(
-    f"presentation/assets/graphs/whole_graph_{'no' if is_labled else ''}labels.png"
+if "show_labels" not in st.session_state:
+    st.session_state.show_labels = True
+
+if st.button("Toggle labels"):
+    st.session_state.show_labels = not st.session_state.show_labels
+
+filename = f"presentation/assets/graphs/whole_graph_{'no' if not st.session_state.show_labels else ''}labels.png"
+st.image(filename)
+
+
+st.markdown(
+    """
+    <footer id="footer">
+    <small>[1]
+    Vincent D Blondel, Jean-Loup Guillaume, Renaud Lambiotte, Etienne Lefebvre, Fast unfolding of communities in large networks, in Journal of Statistical Mechanics: Theory and Experiment 2008 (10), P1000
+    </small>
+    </footer>
+""",
+    unsafe_allow_html=True,
 )
