@@ -1,6 +1,14 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from streamlit_image_zoom import image_zoom
+from PIL import Image
+
+
+def zoomable(img_path):
+    image = Image.open(img_path)
+    return image_zoom(image, keep_resolution=True, mode="dragmove", size=1024)
+
 
 st.header("Analysis")
 
@@ -257,6 +265,7 @@ fig = px.treemap(
 fig.update_traces(textinfo="label+value")
 st.plotly_chart(fig, use_container_width=True)
 
+zoomable("presentation/assets/graphs/partition2/cats_1_largefont.png")
 
 st.markdown(
     """
