@@ -204,6 +204,12 @@ st.success(
 )
 
 with st.expander("first attempt"):
+    st.markdown(
+        """
+        my first attempt ran into trouble as there were too few categories, for instance, gaming, anime 
+        and most films were all grouped into one huge cohort. 
+    """
+    )
     if "show_p1_labels" not in st.session_state:
         st.session_state.show_p1_labels = True
 
