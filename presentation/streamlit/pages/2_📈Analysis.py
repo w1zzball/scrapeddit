@@ -173,3 +173,11 @@ with st.expander("Don't do big data on a potato"):
     )
     st.image("presentation/assets/pyvis_time.png")
     st.image("presentation/assets/pyvis_time_big.png", width=500)
+
+st.divider()
+
+st.markdown(
+    """
+    The graph was imported into the open source network analysis software [Gephi](https://gephi.org/)
+"""
+)
