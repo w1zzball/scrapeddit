@@ -192,8 +192,8 @@ st.markdown(
 
     The graph trimmed to exclude nodes with under 200 comments and then allowed to expand within
     constraints defined by the edge weights using gephi's
-    ForceAtlas2 algorithm until it had settled. After which a community detection algorithm <a href=#footer>[1]</a> was run to 
-    partition the graph's topology into 'communities'. This is what the first analysis produced. 
+    ForceAtlas2 algorithm until it had settled. After which a classification algorithm <a href=#footer>[1]</a> was run to 
+    partition the graph's topology into "modularity classes", henceforce referred to as 'communities'. This is what the first analysis produced. 
 """,
     unsafe_allow_html=True,
 )
@@ -294,7 +294,8 @@ with anime:
     st.markdown(
         """
     This community is dominated by subreddits about anime, memes and youth culture.
-    The lower left portion being
+    The lower left portion being mostly internet/meme culture. This community also has large
+    overlap with gaming.
     """
     )
     zoomable(
@@ -304,7 +305,8 @@ with anime:
 with gaming:
     st.markdown(
         """
-    This community is dominated by gaming subreddits.
+    This community is dominated by gaming subreddits. The lack of outliers indicates
+    that the degree of relation between gaming subreddits is very high.
     
     """
     )
@@ -313,7 +315,8 @@ with gaming:
 with tv:
     st.markdown(
         """
-    This community is dominated by subreddits about TV, film, fantasy and sports.
+    This large and disperate community is centred on subreddits about TV, film, fantasy and sports.
+    The loose connection between some of these topics is suggested by the spread out nature of the graph.
     
     """
     )
