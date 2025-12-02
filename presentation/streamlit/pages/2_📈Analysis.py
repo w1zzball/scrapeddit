@@ -6,9 +6,15 @@ from PIL import Image
 
 
 # @st.dialog("zoomable")
-def zoomable(img_path):
+def zoomable(img_path, zoom_factor=2.0):
     image = Image.open(img_path)
-    return image_zoom(image, keep_resolution=True, mode="dragmove", size=704)
+    return image_zoom(
+        image,
+        keep_resolution=True,
+        mode="dragmove",
+        size=704,
+        zoom_factor=zoom_factor,
+    )
 
 
 st.header("Analysis")
