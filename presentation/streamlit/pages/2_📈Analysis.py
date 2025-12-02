@@ -195,13 +195,13 @@ st.success(
 )
 
 with st.expander("first attempt"):
-    if "show_labels" not in st.session_state:
-        st.session_state.show_labels = True
+    if "show_p1_labels" not in st.session_state:
+        st.session_state.show_p1_labels = True
 
-    if st.button("Toggle labels"):
-        st.session_state.show_labels = not st.session_state.show_labels
+    if st.button("Toggle labels", key="p1"):
+        st.session_state.show_p1_labels = not st.session_state.show_p1_labels
 
-    filename = f"presentation/assets/graphs/whole_graph_{'no' if not st.session_state.show_labels else ''}labels.png"
+    filename = f"presentation/assets/graphs/whole_graph_{'no' if not st.session_state.show_p1_labels else ''}labels.png"
     st.image(filename)
 
 st.markdown(
@@ -211,6 +211,19 @@ st.markdown(
 """
 )
 
+partition2_whole_images = [
+    "presentation/assets/graphs/partition2/whole_graph_nolabels.png",
+    "presentation/assets/graphs/partition2/whole_graph_extralargefont.png",
+]
+if "show_p2_labels" not in st.session_state:
+    st.session_state.show_p2_labels = True
+
+if st.button("Toggle labels", key="p2"):
+    st.session_state.show_p2_labels = not st.session_state.show_p2_labels
+st.image(partition2_whole_images[st.session_state.show_p2_labels == True])
+
+# treemap data
+
 community_data = {
     "category": [
         "Cats, Pets, Home",
@@ -218,7 +231,7 @@ community_data = {
         "Anime, Memes, Youth",
         "Gaming",
         "TV / Film / Fantasy / Sports",
-        "Other communities",
+        "42 Other communities",
     ],
     "proportion of subreddits": [36.29, 14.2, 8.78, 4.76, 3.49, 32.48],
 }
@@ -231,7 +244,7 @@ custom_colours = {
     "Anime, Memes, Youth": "#25FE00",
     "Gaming": "#FF97FF",
     "TV / Film / Fantasy / Sports": "#FCFF32",
-    "Other communities": "#999999",
+    "42 Other communities": "#999999",
 }
 
 fig = px.treemap(
