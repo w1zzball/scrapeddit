@@ -51,7 +51,7 @@ st.markdown(
     """
     ## Transformation
     ### Goal - A table consisting of a column of subreddit pairs and a column of their shared commenter count.
-     
+    
     To get a measure of who commented where I used the postgrest function `string_agg` to produce a comma separated
     list of subreddits a user had commented in.
     ```sql
@@ -96,5 +96,21 @@ st.markdown(
     ...}
     ```
     
+    This was then loaded as a pandas dataframe and 
+    sorted alphabetically on the first and second subreddit names.
+
     """
+)
+st.divider()
+
+st.markdown(
+    """
+    The data was then filtered to remove subreddit pairs with less than a threshold number of 
+    commenters.
+"""
+)
+st.success(
+    """
+    removing pairs with less than 5 commenters cut the table from **367,000** rows to **117,000**
+"""
 )
