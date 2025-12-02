@@ -114,3 +114,14 @@ st.success(
     removing pairs with less than 5 commenters cut the table from **367,000** rows to **117,000**
 """
 )
+
+st.divider()
+
+st.markdown(
+    """
+    ## Network Analysis
+
+    The form of the data lends itself to analysis as a network graph. The graph data was made using networkx
+    first the cleaned  
+"""
+)
