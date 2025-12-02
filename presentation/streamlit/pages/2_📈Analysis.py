@@ -326,6 +326,71 @@ with tv:
 
 st.markdown(
     """
+    #### Interesting observations from smaller communities
+"""
+)
+
+diy, genx, mtg, uk, programming = st.tabs(
+    ["DIY", "GenX", "Magic the Gathering", "UK", "Programming"]
+)
+
+with diy:
+    st.markdown(
+        """
+    The DIY subreddits share a community with guitar,lawncare and urban exploration subreddits
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/smaller_communities/DIY.png"
+    )
+
+with genx:
+    st.markdown(
+        """
+    The GenX subreddit has many music related subreddits in its community
+    r/Cd_collectors. It also has r/dogs
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/smaller_communities/GenX.png"
+    )
+
+with mtg:
+    st.markdown(
+        """
+    The Small number of card game Magic the Gathering subreddits share a community
+    with Dungeons and Dragons subreddits and groups dedicated to game dev and python programming
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/smaller_communities/MTG_python.png"
+    )
+
+with uk:
+    st.markdown(
+        """
+    The UK groups share a community with most football related subreddits
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/smaller_communities/UK.png"
+    )
+
+with programming:
+    st.markdown(
+        """
+    The community which contains general programming and linux subreddits 
+    also contains the startrek and stargate groups and groups related to the
+    Sanfransisco and New York areas
+    """
+    )
+    zoomable(
+        "presentation/assets/graphs/partition2/smaller_communities/programming.png"
+    )
+
+
+st.markdown(
+    """
     <footer id="footer">
     <small>[1]
     Vincent D Blondel, Jean-Loup Guillaume, Renaud Lambiotte, Etienne Lefebvre, Fast unfolding of communities in large networks, in Journal of Statistical Mechanics: Theory and Experiment 2008 (10), P1000
