@@ -31,6 +31,9 @@ st.markdown(
     content from communities flagged 18+ would be useful.
     - Changing the reddit API from PRAW to its asynchronous variant may give some slight speed increases.
     - Outputting to files from the prompt.
+    ### Other analysis
+    - A large corpus of text lends itself to natural language processing and in future I would like to try both topic 
+    extraction and model training on the data.
     """
 )
 
