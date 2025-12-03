@@ -138,3 +138,199 @@ def test_db_get_redditors_from_subreddit_with_r_prefix(mock_with_resources):
 
     mock_cursor.execute.assert_called_once()
     assert redditors == ["userA", "userB"]
+
+
+def test_insert_submission(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.execute = MagicMock()
+
+    submission_data = {
+        "name": "t3_abcdef",
+        "author": "testuser",
+        "title": "Test Submission",
+        "selftext": "This is a test submission.",
+        "url": "https://reddit.com/r/testsubreddit/comments/abcdef/test_submission/",
+        "created_utc": 1620000000,
+        "edited": False,
+        "ups": 100,
+        "subreddit": "r/testsubreddit",
+        "permalink": "/r/testsubreddit/comments/abcdef/test_submission/",
+    }
+
+    mod.insert_submission(mock_conn, submission_data)
+
+    mock_cursor.execute.assert_called_once()
+
+
+def test_insert_submission_overwrite(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.execute = MagicMock()
+
+    submission_data = {
+        "name": "t3_ghijkl",
+        "author": "anotheruser",
+        "title": "Another Test Submission",
+        "selftext": "This is another test submission.",
+        "url": "https://reddit.com/r/testsubreddit/comments/ghijkl/another_test_submission/",
+        "created_utc": 1620001000,
+        "edited": True,
+        "ups": 150,
+        "subreddit": "r/testsubreddit",
+        "permalink": "/r/testsubreddit/comments/ghijkl/another_test_submission/",
+    }
+
+    mod.insert_submission(mock_conn, submission_data, overwrite=True)
+
+    mock_cursor.execute.assert_called_once()
+
+
+def test_insert_comment(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.execute = MagicMock()
+
+    comment_data = {
+        "name": "t1_abcdef",
+        "author": "commentuser",
+        "body": "This is a test comment.",
+        "created_utc": 1620002000,
+        "edited": False,
+        "ups": 50,
+        "parent_id": "t3_abcdef",
+        "submission_id": "t3_abcdef",
+        "subreddit": "r/testsubreddit",
+    }
+
+    mod.insert_comment(mock_conn, comment_data)
+
+    mock_cursor.execute.assert_called_once()
+
+
+def test_insert_comment_overwrite(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.execute = MagicMock()
+
+    comment_data = {
+        "name": "t1_ghijkl",
+        "author": "anothercommenter",
+        "body": "This is another test comment.",
+        "created_utc": 1620003000,
+        "edited": True,
+        "ups": 75,
+        "parent_id": "t3_ghijkl",
+        "submission_id": "t3_ghijkl",
+        "subreddit": "r/testsubreddit",
+    }
+
+    mod.insert_comment(mock_conn, comment_data, overwrite=True)
+
+    mock_cursor.execute.assert_called_once()
+
+
+def test_batch_insert_comments(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.executemany = MagicMock()
+
+    comments_data = [
+        (
+            "t1_abcdef",
+            "commenter1",
+            "First batch comment.",
+            1620004000,
+            False,
+            20,
+            "t3_abcdef",
+            "t3_abcdef",
+            "r/testsubreddit",
+        ),
+        (
+            "t1_ghijkl",
+            "commenter2",
+            "Second batch comment.",
+            1620005000,
+            False,
+            30,
+            "t3_abcdef",
+            "t3_abcdef",
+            "r/testsubreddit",
+        ),
+    ]
+
+    mod.batch_insert_comments(mock_conn, comments_data)
+
+    mock_cursor.executemany.assert_called_once()
+
+
+def test_batch_insert_comments_overwrite(mock_with_resources):
+    mod = mock_with_resources
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_conn.cursor.return_value.__exit__.return_value = False
+
+    mock_cursor.executemany = MagicMock()
+
+    comments_data = [
+        (
+            "t1_mnopqr",
+            "commenter3",
+            "Third batch comment.",
+            1620006000,
+            True,
+            40,
+            "t3_ghijkl",
+            "t3_ghijkl",
+            "r/testsubreddit",
+        ),
+        (
+            "t1_stuvwx",
+            "commenter4",
+            "Fourth batch comment.",
+            1620007000,
+            True,
+            50,
+            "t3_ghijkl",
+            "t3_ghijkl",
+            "r/testsubreddit",
+        ),
+    ]
+
+    mod.batch_insert_comments(mock_conn, comments_data, overwrite=True)
+
+    mock_cursor.executemany.assert_called_once()
