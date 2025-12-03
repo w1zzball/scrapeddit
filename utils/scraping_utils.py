@@ -10,6 +10,7 @@ from .reddit_utils import (
     get_redditors_from_subreddit,
 )
 from .connection_utils import with_resources
+from .db_utils import insert_submission
 import time
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 # TODO factor out insertion into separate db_utils.py
-@with_resources(use_reddit=False, use_db=True)
+# @with_resources(use_reddit=False, use_db=True)
 def scrape_submission(
-    conn,
+    # conn,
     post_id: str | None = None,
     post_url: str | None = None,
     overwrite: bool = False,
@@ -43,38 +44,7 @@ def scrape_submission(
     submission = get_submission(post_id, post_url)
     logger.info("transforming submission data...")
     submission = format_submission(submission)
-    cols = (
-        "(name, author, title, selftext, url, created_utc, "
-        "edited, ups, subreddit, permalink)"
-    )
-    placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"
-    if overwrite:
-        conflict_clause = (
-            "ON CONFLICT (name) DO UPDATE SET "
-            "author=EXCLUDED.author, "
-            "title=EXCLUDED.title, "
-            "selftext=EXCLUDED.selftext, "
-            "url=EXCLUDED.url, "
-            "created_utc=EXCLUDED.created_utc, "
-            "edited=EXCLUDED.edited, "
-            "ups=EXCLUDED.ups, "
-            "subreddit=EXCLUDED.subreddit, "
-            "permalink=EXCLUDED.permalink "
-            "RETURNING name;"
-        )
-    else:
-        conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
-    logger.info("loading submission data into DB...")
-    with conn.cursor() as cur:
-        cur.execute(
-            f"""
-            INSERT INTO submissions {cols}
-            VALUES ({placeholders})
-            {conflict_clause}
-            """,
-            list(submission.values()),
-        )
-        res = cur.fetchone()
+    res = insert_submission(submission)
     if res:
         prefix = ""
         if index is not None and total is not None:

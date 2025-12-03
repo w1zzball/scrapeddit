@@ -73,3 +73,40 @@ def db_get_redditors_from_subreddit(
         subreddit_name,
     )
     return redditors
+
+
+@with_resources(use_db=True, use_reddit=False)
+def insert_submission(conn, submission, overwrite=False):
+    cols = (
+        "(name, author, title, selftext, url, created_utc, "
+        "edited, ups, subreddit, permalink)"
+    )
+    placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"
+    if overwrite:
+        conflict_clause = (
+            "ON CONFLICT (name) DO UPDATE SET "
+            "author=EXCLUDED.author, "
+            "title=EXCLUDED.title, "
+            "selftext=EXCLUDED.selftext, "
+            "url=EXCLUDED.url, "
+            "created_utc=EXCLUDED.created_utc, "
+            "edited=EXCLUDED.edited, "
+            "ups=EXCLUDED.ups, "
+            "subreddit=EXCLUDED.subreddit, "
+            "permalink=EXCLUDED.permalink "
+            "RETURNING name;"
+        )
+    else:
+        conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
+    logger.info("loading submission data into DB...")
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            INSERT INTO submissions {cols}
+            VALUES ({placeholders})
+            {conflict_clause}
+            """,
+            list(submission.values()),
+        )
+        res = cur.fetchone()
+        return res
