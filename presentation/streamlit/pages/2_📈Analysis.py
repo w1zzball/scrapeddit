@@ -6,7 +6,7 @@ from PIL import Image
 
 
 # @st.dialog("zoomable")
-def zoomable(img_path, zoom_factor=2.0):
+def zoomable(img_path, zoom_factor=3.0):
     image = Image.open(img_path)
     return image_zoom(
         image,
@@ -18,6 +18,14 @@ def zoomable(img_path, zoom_factor=2.0):
 
 
 st.header("Analysis")
+
+with st.sidebar.container():
+    with st.expander("how to read"):
+        st.success("Highlights in Green")
+        st.warning("Roadblocks in Yellow")
+        st.expander("Asides in Accordions")
+
+zoom_level = st.sidebar.slider("zoom level", 1.0, 4.0, 2.0)
 
 st.markdown(
     """
@@ -237,11 +245,14 @@ partition2_whole_images = [
     "presentation/assets/graphs/partition2/whole_graph_extralargefont.png",
 ]
 if "show_p2_labels" not in st.session_state:
-    st.session_state.show_p2_labels = True
+    st.session_state.show_p2_labels = False
 
 if st.button("Toggle labels", key="p2"):
     st.session_state.show_p2_labels = not st.session_state.show_p2_labels
-zoomable(partition2_whole_images[st.session_state.show_p2_labels == True])
+zoomable(
+    partition2_whole_images[st.session_state.show_p2_labels == True],
+    zoom_factor=zoom_level,
+)
 
 # treemap data
 
@@ -294,7 +305,10 @@ with cats:
     subreddits. With some gaming subreddits creeping upwards towards the larger gaming community.
     """
     )
-    zoomable("presentation/assets/graphs/partition2/cats_1_largefont.png")
+    zoomable(
+        "presentation/assets/graphs/partition2/cats_1_largefont.png",
+        zoom_factor=zoom_level,
+    )
 
 with general:
     st.markdown(
@@ -305,7 +319,8 @@ with general:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/general_ask_15_largefont.png"
+        "presentation/assets/graphs/partition2/general_ask_15_largefont.png",
+        zoom_factor=zoom_level,
     )
 
 with anime:
@@ -317,7 +332,8 @@ with anime:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/anime_memes_youth_17_largefont.png"
+        "presentation/assets/graphs/partition2/anime_memes_youth_17_largefont.png",
+        zoom_factor=zoom_level,
     )
 
 with gaming:
@@ -328,7 +344,10 @@ with gaming:
     
     """
     )
-    zoomable("presentation/assets/graphs/partition2/gaming_11_largefont.png")
+    zoomable(
+        "presentation/assets/graphs/partition2/gaming_11_largefont.png",
+        zoom_factor=zoom_level,
+    )
 
 with tv:
     st.markdown(
@@ -339,7 +358,8 @@ with tv:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/film_sports_fantasy_30_extralargefont.png"
+        "presentation/assets/graphs/partition2/film_sports_fantasy_30_extralargefont.png",
+        zoom_factor=zoom_level,
     )
 
 st.markdown(
@@ -359,7 +379,8 @@ with diy:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/smaller_communities/DIY.png"
+        "presentation/assets/graphs/partition2/smaller_communities/DIY.png",
+        zoom_factor=zoom_level,
     )
 
 with genx:
@@ -370,7 +391,8 @@ with genx:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/smaller_communities/GenX.png"
+        "presentation/assets/graphs/partition2/smaller_communities/GenX.png",
+        zoom_factor=zoom_level,
     )
 
 with mtg:
@@ -381,7 +403,8 @@ with mtg:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/smaller_communities/MTG_python.png"
+        "presentation/assets/graphs/partition2/smaller_communities/MTG_python.png",
+        zoom_factor=zoom_level,
     )
 
 with uk:
@@ -391,7 +414,8 @@ with uk:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/smaller_communities/UK.png"
+        "presentation/assets/graphs/partition2/smaller_communities/UK.png",
+        zoom_factor=zoom_level,
     )
 
 with programming:
@@ -403,7 +427,8 @@ with programming:
     """
     )
     zoomable(
-        "presentation/assets/graphs/partition2/smaller_communities/programming.png"
+        "presentation/assets/graphs/partition2/smaller_communities/programming.png",
+        zoom_factor=zoom_level,
     )
 
 
