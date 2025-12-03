@@ -189,6 +189,22 @@ st.divider()
 
 st.markdown(
     """
+    #### A note about nonexistent comments
+"""
+)
+
+st.warning(
+    """
+    Comments that have been deleted / removed by moderators, or comments who's authors have 
+    deleted their account will by still be scraped as these data are still potentially useful.
+    Such comments have a body of `[deleted]` or an Author of `None` respectively. 
+"""
+)
+
+st.divider()
+
+st.markdown(
+    """
     ### Schema Design
 """
 )
