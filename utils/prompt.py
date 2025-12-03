@@ -12,14 +12,12 @@ from .state import subreddit_progress
 from .console import console
 from .prompt_help_text import prompt_data
 
-# pylint: disable=locally-disabled, line-too-long
-
 
 # TODO add unit tests for prompt loop (mocking input/output)
 # TODO add recursive subreddit scraper command
 def prompt_loop():
     """Interactive prompt loop for scrapeddit CLI."""
-    # Autocompletion for top-level commands and scrape targets.
+    # autocompletion for top-level commands and scrape targets.
     completer = NestedCompleter.from_nested_dict(
         {
             "scrape": {
@@ -85,7 +83,6 @@ def prompt_loop():
             # fail silently on any error
             pass
 
-            # TODO change to declarative style with data structure mapping
         if not tokens:
             return HTML(
                 "Commands: <b>scrape</b>, <b>db</b>, "
@@ -100,7 +97,7 @@ def prompt_loop():
             # brief usage when only 'scrape' typed
             if len(tokens) == 1:
                 return HTML(prompt_data["scrape"]["base"]["desc"])
-
+            # more detailed help
             target = tokens[1].lower()
             s = prompt_data["scrape"]["error"]["desc"]
             for scrape_func in prompt_data["scrape"].values():
@@ -120,6 +117,7 @@ def prompt_loop():
     cli_input_executed = False
     while True:
         try:
+            # interactive prompt
             if len(sys.argv) < 2 or cli_input_executed:
                 user_input = session.prompt(
                     "scrapeddit> ",
@@ -130,21 +128,17 @@ def prompt_loop():
                 if not user_input:
                     continue
             else:
-                # CLI invocation
+                # command line invocation
                 user_input = " ".join(sys.argv[1:]).strip()
                 cli_input_executed = True
                 if not user_input:
                     continue
 
             # TODO refactor to accept none scrape commands
-            # TODO factor out argparse handling to function returning args
-            # Support commands:
-            #   scrape thread <id|url>
-            #   scrape submission <id|url>
-            #   scrape comment <comment_id>
+            # TODO factor out argparse handling to separate function...
+            # ...returning args
             if user_input.startswith("scrape "):
-                # allow flags after the id/url, e.g.:
-                #   scrape thread <id|url> --overwrite --limit 0 --threshold 0
+
                 tokens = shlex.split(user_input)
                 if len(tokens) < 3:
                     console.print(prompt_data["scrape"]["error"]["desc"])
@@ -193,7 +187,7 @@ def prompt_loop():
                         except ValueError:
                             print(f"Invalid limit value: {ns.limit}")
                             limit = None
-                # If invoking scrape subreddit with no limit, default to 10
+                # invoking scrape subreddit with no limit defaults to 10
                 if target in ("subreddit", "r") and limit is None:
                     limit = 10
                 threshold = ns.threshold if ns.threshold is not None else 0
