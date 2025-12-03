@@ -7,3 +7,4 @@ helper_logs/
 presentation/data/
 logs/*
 .vscode/
+.coverage
