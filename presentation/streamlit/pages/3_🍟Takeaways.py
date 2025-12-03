@@ -26,6 +26,16 @@ st.markdown(
 
 st.markdown(
     """
+    ### Features to be added
+    - Either by way of VPN or age confirmation a bot can scrape 18+ subreddits. So a toggle for allowing/disallowing
+    content from communities flagged 18+ would be useful.
+    - Changing the reddit API from PRAW to its asynchronous variant may give some slight speed increases.
+    - Outputting to files from the prompt.
+    """
+)
+
+st.markdown(
+    """
     ### Thanks
     - ##### Huge thanks to Ed and Ryan for their instruction and guidance.
     - ##### Thanks to the rest of the DF Team, including but not limited to Lisa, Bassmah, Ruth, Alex and Tim.
