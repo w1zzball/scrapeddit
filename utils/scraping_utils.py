@@ -559,7 +559,9 @@ def expand_redditors_comments(conn, threshold, limit, max_workers=5, **kwargs):
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(scrape_redditor, redditor): redditor
+                executor.submit(
+                    scrape_redditor, redditor, limit=limit
+                ): redditor
                 for redditor in redditors
             }
             for future in as_completed(futures):
