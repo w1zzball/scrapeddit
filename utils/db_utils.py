@@ -142,3 +142,30 @@ def insert_comment(conn, comment, overwrite=False):
         )
         res = cur.fetchone()
     return res
+
+
+@with_resources(use_db=True, use_reddit=False)
+def batch_insert_comments(conn, comments, overwrite=False):
+    with conn.cursor() as cur:
+        cols = (
+            "(name, author, body, created_utc, edited, ups, "
+            "parent_id, submission_id, subreddit)"
+        )
+        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
+        if overwrite:
+            conflict_clause = (
+                "ON CONFLICT (name) DO UPDATE SET "
+                "author=EXCLUDED.author, body=EXCLUDED.body, "
+                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
+                "submission_id=EXCLUDED.submission_id, "
+                "subreddit=EXCLUDED.subreddit"
+            )
+        else:
+            conflict_clause = "ON CONFLICT (name) DO NOTHING"
+
+        sql_stmt = (
+            "INSERT INTO comments " + cols + "\n"
+            "VALUES (" + placeholders + ")\n" + conflict_clause
+        )
+        cur.executemany(sql_stmt, comments)

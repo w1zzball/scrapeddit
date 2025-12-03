@@ -13,6 +13,7 @@ from .connection_utils import with_resources
 from .db_utils import (
     insert_submission,
     insert_comment,
+    batch_insert_comments,
 )
 import time
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
@@ -115,6 +116,7 @@ def scrape_comments_in_thread(
     placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
 
     logger.info("loading comments data into DB...")
+    # logic to see if comments need updating
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -464,9 +466,9 @@ def scrape_subreddit(
 
 
 # TODO stop duplicate redditor scraping
-@with_resources(use_reddit=False, use_db=True)
+# @with_resources(use_reddit=False, use_db=True)
 def scrape_redditor(
-    conn,
+    # conn,
     user_id,
     limit: int = 100,
     overwrite: bool = False,
@@ -493,29 +495,7 @@ def scrape_redditor(
         f"Inserting {len(formatted_rows)} comments for "
         f"u/{user_id} into the database."
     )
-    with conn.cursor() as cur:
-        cols = (
-            "(name, author, body, created_utc, edited, ups, "
-            "parent_id, submission_id, subreddit)"
-        )
-        placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
-        if overwrite:
-            conflict_clause = (
-                "ON CONFLICT (name) DO UPDATE SET "
-                "author=EXCLUDED.author, body=EXCLUDED.body, "
-                "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
-                "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
-                "submission_id=EXCLUDED.submission_id, "
-                "subreddit=EXCLUDED.subreddit"
-            )
-        else:
-            conflict_clause = "ON CONFLICT (name) DO NOTHING"
-
-        sql_stmt = (
-            "INSERT INTO comments " + cols + "\n"
-            "VALUES (" + placeholders + ")\n" + conflict_clause
-        )
-        cur.executemany(sql_stmt, formatted_rows)
+    batch_insert_comments(comments=formatted_rows, overwrite=overwrite)
     console.print(f"Inserted {len(formatted_rows)} comments for u/{user_id}.")
 
 
