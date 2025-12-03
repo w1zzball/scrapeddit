@@ -10,7 +10,10 @@ from .reddit_utils import (
     get_redditors_from_subreddit,
 )
 from .connection_utils import with_resources
-from .db_utils import insert_submission
+from .db_utils import (
+    insert_submission,
+    insert_comment,
+)
 import time
 from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -44,6 +47,7 @@ def scrape_submission(
     submission = get_submission(post_id, post_url)
     logger.info("transforming submission data...")
     submission = format_submission(submission)
+    logger.info("loading submission data into DB...")
     res = insert_submission(submission)
     if res:
         prefix = ""
@@ -56,8 +60,8 @@ def scrape_submission(
         console.print("No change to submission (conflict and skipped)")
 
 
-@with_resources(use_reddit=False, use_db=True)
-def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
+# @with_resources(use_reddit=False, use_db=True)
+def scrape_comment(comment_id: str, overwrite: bool = False, **kwargs):
     """
     Fetch a single comment and insert into DB.
 
@@ -68,34 +72,8 @@ def scrape_comment(conn, comment_id: str, overwrite: bool = False, **kwargs):
     comment = get_comment(comment_id)  # type: ignore
     logger.info("transforming comment data...")
     formatted_comment = format_comment(comment)
-    cols = (
-        "(name, author, body, created_utc, edited, ups, "
-        "parent_id, submission_id, subreddit)"
-    )
-    placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
-    if overwrite:
-        conflict_clause = (
-            "ON CONFLICT (name) DO UPDATE SET "
-            "author=EXCLUDED.author, body=EXCLUDED.body, "
-            "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
-            "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
-            "submission_id=EXCLUDED.submission_id, "
-            "subreddit=EXCLUDED.subreddit RETURNING name;"
-        )
-    else:
-        conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
-
     logger.info("loading comment data into DB...")
-    with conn.cursor() as cur:
-        cur.execute(
-            f"""
-            INSERT INTO comments {cols}
-            VALUES ({placeholders})
-            {conflict_clause}
-            """,
-            formatted_comment,
-        )
-        res = cur.fetchone()
+    res = insert_comment(formatted_comment)
     if res:
         console.print(f"Inserted/updated comment {res[0]}")
     else:

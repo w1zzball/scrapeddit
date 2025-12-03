@@ -98,7 +98,7 @@ def insert_submission(conn, submission, overwrite=False):
         )
     else:
         conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
-    logger.info("loading submission data into DB...")
+
     with conn.cursor() as cur:
         cur.execute(
             f"""
@@ -109,4 +109,36 @@ def insert_submission(conn, submission, overwrite=False):
             list(submission.values()),
         )
         res = cur.fetchone()
-        return res
+    return res
+
+
+@with_resources(use_db=True, use_reddit=False)
+def insert_comment(conn, comment, overwrite=False):
+    cols = (
+        "(name, author, body, created_utc, edited, ups, "
+        "parent_id, submission_id, subreddit)"
+    )
+    placeholders = "%s,%s,%s,%s,%s,%s,%s,%s,%s"
+    if overwrite:
+        conflict_clause = (
+            "ON CONFLICT (name) DO UPDATE SET "
+            "author=EXCLUDED.author, body=EXCLUDED.body, "
+            "created_utc=EXCLUDED.created_utc, edited=EXCLUDED.edited, "
+            "ups=EXCLUDED.ups, parent_id=EXCLUDED.parent_id, "
+            "submission_id=EXCLUDED.submission_id, "
+            "subreddit=EXCLUDED.subreddit RETURNING name;"
+        )
+    else:
+        conflict_clause = "ON CONFLICT (name) DO NOTHING RETURNING name;"
+
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            INSERT INTO comments {cols}
+            VALUES ({placeholders})
+            {conflict_clause}
+            """,
+            comment,
+        )
+        res = cur.fetchone()
+    return res
