@@ -1,5 +1,11 @@
 import streamlit as st
 
+with st.sidebar.container():
+    with st.expander("how to read"):
+        st.success("Highlights in Green")
+        st.warning("Roadblocks in Yellow")
+        st.expander("Asides in Accordions")
+
 st.header("Design")
 
 st.markdown(

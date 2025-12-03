@@ -17,13 +17,13 @@ def zoomable(img_path, zoom_factor=3.0):
     )
 
 
-st.header("Analysis")
-
 with st.sidebar.container():
     with st.expander("how to read"):
         st.success("Highlights in Green")
         st.warning("Roadblocks in Yellow")
         st.expander("Asides in Accordions")
+
+st.header("Analysis")
 
 zoom_level = st.sidebar.slider("zoom level", 1.0, 4.0, 2.0)
 
@@ -213,7 +213,9 @@ st.markdown(
 )
 st.success(
     """
-    The data included many Isolated/niche communities, 13% of nodes make up 50% of all edges
+    The data included a few large hubs among a sea of Isolated/niche communities,
+    
+                     13% of nodes make up 50% of all edges
 """
 )
 
