@@ -24,6 +24,7 @@ def reddit_session() -> Generator[praw.Reddit, None, None]:
         yield reddit
     except Exception as e:
         logger.error("Reddit session error: %s", e)
+        raise (e)
     finally:
         del reddit
 
