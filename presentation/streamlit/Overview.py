@@ -41,6 +41,13 @@ with st.expander("What is Reddit"):
             - date : date of creation / edit
         """
     )
+    st.warning(
+        """
+    reddit allows for content and communities to be flagged as 18+, requiring verification/explicit approval
+    to view. As the account this scraper was using to authenticate was not verified 18+ any comments,
+    subreddits or redditors requested which were flagged 18+ returned no response.
+    """
+    )
 
 with st.expander("Inception"):
     st.write(
