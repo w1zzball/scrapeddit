@@ -26,10 +26,7 @@ logger = logging.getLogger(__name__)
 """Utils for scraping Reddit and inserting into DB."""
 
 
-# TODO factor out insertion into separate db_utils.py
-# @with_resources(use_reddit=False, use_db=True)
 def scrape_submission(
-    # conn,
     post_id: str | None = None,
     post_url: str | None = None,
     overwrite: bool = False,
@@ -61,7 +58,6 @@ def scrape_submission(
         console.print("No change to submission (conflict and skipped)")
 
 
-# @with_resources(use_reddit=False, use_db=True)
 def scrape_comment(comment_id: str, overwrite: bool = False, **kwargs):
     """
     Fetch a single comment and insert into DB.
@@ -466,9 +462,7 @@ def scrape_subreddit(
 
 
 # TODO stop duplicate redditor scraping
-# @with_resources(use_reddit=False, use_db=True)
 def scrape_redditor(
-    # conn,
     user_id,
     limit: int = 100,
     overwrite: bool = False,
@@ -490,7 +484,6 @@ def scrape_redditor(
         console.print(f"[red]Error scraping u/{user_id}: {e}[/red]")
         return
     formatted_rows = [format_comment(c) for c in comments]
-    # TODO factor out common insertion code as it is used multiple times
     logger.info(
         f"Inserting {len(formatted_rows)} comments for "
         f"u/{user_id} into the database."
@@ -520,9 +513,6 @@ def scrape_redditors(
             )
         except Exception as e:
             console.print(f"[red]Error scraping u/{redditor}: {e}[/red]")
-
-
-# TODO add multithreading option
 
 
 @with_resources(use_reddit=False, use_db=True)
