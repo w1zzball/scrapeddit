@@ -121,7 +121,7 @@ DB_STRING=postgresql://user:pass@host:5432/dbname
 ```
 
 - `DB_STRING` should be a valid PostgreSQL connection string used by `psycopg`.
-- The app expects the `.env` file in the repo root; it will raise if it cannot be found.
+- The app expects the `.env` file in the repo root; it will raise an exception if it cannot be found.
 
 ## Requirements
 
