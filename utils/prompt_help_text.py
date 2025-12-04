@@ -18,8 +18,8 @@ prompt_data = {
             "targets": (),
             "desc": (
                 "Usage: <b>scrape &lt;target&gt; &lt;id_or_url&gt;</b>\n"
-                " [--overwrite|-o] [--limit N] "
-                "[--threshold N] [--max-workers N]"
+                " [--overwrite|-o] "
+                " [--max-workers N]"
             ),
             "func": None,
         },
@@ -44,7 +44,7 @@ prompt_data = {
             "targets": ("submission", "s", "post"),
             "desc": (
                 "submission: scrape submission only. Flags:\n "
-                "--overwrite/-o, --limit N (None=all), --threshold N"
+                "--overwrite/-o"
             ),
             "func": scrape_submission,
         },
@@ -60,7 +60,7 @@ prompt_data = {
             "targets": ("redditor", "user", "u"),
             "desc": (
                 "redditor: scrape comments from a redditor. Flags:\n "
-                "--overwrite/-o, --limit N (None=all), --threshold N,\n "
+                "--overwrite/-o, --limit N (None=all)\n "
                 "--sort (new/top/hot/controversial)"
             ),
             "func": scrape_redditor,
@@ -69,8 +69,9 @@ prompt_data = {
             "targets": ("subreddit", "sub", "r"),
             "desc": (
                 "subreddit: scrape redditors from a subreddit.\n "
-                "Flags: --redditor-limit N, --comment-limit N,\n "
-                "--depth N, --sort (new/top/hot/controversial)"
+                "Flags: --limit N, --overwrite/-o, --max-workers N,\n "
+                "--depth N, --sort (new/top/hot/controversial),\n"
+                "--subs-only, --comments-only, --skip-existing"
             ),
             "func": scrape_subreddit,
         },
@@ -105,6 +106,6 @@ prompt_data = {
     },
     "unknown": (
         "Error: Unknown command. Available commands:"
-        " scrape, delete, db, help",
+        " scrape, db, delete, expand, exit",
     ),
 }

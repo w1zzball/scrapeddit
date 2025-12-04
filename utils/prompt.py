@@ -156,6 +156,7 @@ def prompt_loop():
                 parser.add_argument("-o", "--overwrite", action="store_true")
                 parser.add_argument("--limit", type=str)
                 parser.add_argument("--subs-only", action="store_true")
+                parser.add_argument("--comments-only", action="store_true")
                 parser.add_argument("--sort", type=str)
                 parser.add_argument("--threshold", type=int)
                 parser.add_argument("-w", "--max-workers", type=int)
@@ -270,7 +271,10 @@ def prompt_loop():
             elif user_input in {"exit", "quit"}:
                 break
             else:
-                print("Unknown command. Try 'scrape', 'db', or 'exit'.")
+                print(
+                    "Unknown command. Try 'scrape', 'db', 'delete', "
+                    "'expand' or 'exit'."
+                )
         except KeyboardInterrupt:
             break
         except EOFError:
