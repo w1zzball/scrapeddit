@@ -80,8 +80,8 @@ prompt_data = {
         "targets": ("expand", "expand_redditors_comments"),
         "desc": (
             "expand: expand redditors comments with less"
-            " than a threshold number of comments. "
-            "Flags: --threshold N"
+            " than a threshold number of comments.\n "
+            "Flags: --threshold N, --max-workers N, --limit N"
         ),
         "func": expand_redditors_comments,
     },

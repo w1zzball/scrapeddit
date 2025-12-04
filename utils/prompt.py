@@ -108,7 +108,8 @@ def prompt_loop():
                     )
 
             return HTML(s)
-
+        if cmd == "expand":
+            return HTML(prompt_data["expand"]["desc"])
         if cmd == "delete":
             # help for delete command
             return HTML(prompt_data["delete"]["desc"])
