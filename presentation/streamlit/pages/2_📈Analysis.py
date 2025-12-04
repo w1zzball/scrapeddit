@@ -23,14 +23,20 @@ with st.sidebar.container():
         st.warning("Roadblocks in Yellow")
         st.expander("Asides in Accordions")
 
-st.header("Analysis")
+st.markdown("## Analysis")
 
 zoom_level = st.sidebar.slider("zoom level", 1.0, 4.0, 2.0)
 
 st.markdown(
     """
-    After gathering a substantial amount of data, 1.3million comments from 33,000 subreddits.
-    I set out to analyse the structure of the communities I had scraped.
+    #### Goal -After gathering a substantial amount of data, I set out to analyse the structure of the communities I had scraped.
+
+"""
+)
+
+st.success(
+    """
+    At the start of the analysis I was working with 1.3 million comments from 33,000 subreddits.
 """
 )
 

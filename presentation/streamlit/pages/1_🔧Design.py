@@ -79,7 +79,7 @@ with st.expander("A cautionary tale"):
         """
         after achieving a double digit times speedup with parrelelism I left the extraction
         running overnight scraping the top 1000 threads in the top 1000
-         subreddits upon waking the next morning I had a respectable 2.3 Million comments/submissions scraped.
+         subreddits upon waking the next morning I had a few million comments/submissions scraped.
            
         then I opened my email
     """
