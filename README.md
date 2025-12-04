@@ -1,83 +1,77 @@
 # Scrapeddit
 
-A small interactive Reddit scraper that stores submissions and comments in a PostgreSQL
-database. Use the interactive prompt to run scraping commands, execute SQL, or delete
+A an ETL suite for Reddit scraping which stores ingested data in a PostgreSQL database. Has a richly featured interactive prompt to run scraping commands, execute SQL, or delete
 rows from the DB.
 
 ## Features
 
 - Scrape a single submission, comment, or entire thread (submission + comments).
-- Scrape many submissions from a subreddit with optional comment scraping and
-	concurrency.
+- Scrape many submissions from a subreddit with optional comment scraping and multithreading.
 - Scrape submissions from redditors
 - Expand redditors with less than a specified number of comments in the database.
 - Recursively scrape comments from subreddits
 - Store scraped data in PostgreSQL (two schemas/tables: `submissions` and `comments`).
-- Interactive prompt with history, autocompletion and a `help` command describing
-	flags and usage.
+- Interactive prompt with history, autocompletion dynamic help window describing flags and usage.
 - run_batch script to run multiple scrape commands from a text file/CLI.
 ## Commands
 
-All commands are run inside the interactive prompt (`py main.py`).
+Commands are run inside the interactive prompt (`py main.py`).
 All commands support `--exit-after` to exit the prompt after completion.
 
-- scrape thread <id|url> [flags]
+- `scrape thread <id|url> [flags]`
 	- Scrape a submission and all comments.
 	- Flags:
-		- --limit N           Limit for fetching comments (replace_more). Use `None` for
-													no limit.
-		- --threshold N       replace_more threshold (default 0).
+		- --limit N           Limit for number of  nested comments to expand. Use `None` for no limit.
+		- --threshold N       threshold number of comments below which nested comments are not expanded (default 0).
 		- --overwrite, -o     Update existing rows on conflict.
 
 
-- scrape submission <id|url> [--overwrite|-o]
+- `scrape submission <id|url> [flags]`
 	- Scrape only the submission (no comments).
 	- Flags:
 		- --overwrite, -o     Update existing rows on conflict.
 
 
-- scrape comment <comment_id> [--overwrite|-o]
+- `scrape comment <comment_id> [flags]`
 	- Scrape a single comment by ID.
 	- Flags:
 		- --overwrite, -o     Update existing rows on conflict.
 
 
-- scrape subreddit <name> [flags]
+- `scrape subreddit <name> [flags]`
 	- Scrape many submissions from a subreddit.
 	- Flags:
-		- --sort <new|hot|top|rising|controversial> (default: new)
+		- --sort <new|hot|top|rising|controversial> (default: new), reddit sort order for comments
 		- --limit N           Number of submissions to fetch (default 10 when omitted).
 		- --subs-only         Insert only submissions, skip comment scraping.
-		- --max-workers N, -w Concurrency level for comment scraping (default 5).
+		- --comments-only	Insert only comments, skip submission insertion.
+		- --max-workers N, -w threads to use when scraping comments (default 5).
 		- --overwrite, -o     Update existing rows on conflict.
 		- --skip-existing, -s Skip submissions already present in DB.
 
 
-- scrape redditor <username> [flags]
+- `scrape redditor <username> [flags]`
 	- Scrape many submissions from a redditor.
 	- Flags:
-		- --sort <new|hot|top|rising|controversial> (default: new)
+		- --sort <new|hot|top|rising|controversial> (default: new) reddit sort order for comments
 		- --limit N           Number of submissions to fetch (default 100 when omitted).
 		- --overwrite, -o     Update existing rows on conflict.
 
-- expand
+- `expand [flags]`
 	- Expand redditors with less than a specified number of comments in the DB.
 	- Flags:
 		- --threshold N       Maximum number of comments a redditor must have in the DB
 		- --limit N 		 Number of comments to fetch per redditor (default 100).
 		- --max-workers N, -w Concurrency level for comment scraping (default 5).
 
-- delete <submissions|comments|all>
+- `delete <submissions|comments|all>`
 	- Delete rows from one or both tables. This command prompts for a confirmation
 		string (`Yes`) before running. Note: this removes rows, it does not drop tables.
 
-- db <SQL>
+- `db <SQL>`
 	- Execute a SQL statement directly against the configured database.
 
-- help [command]
-	- Show usage and flags for a command; e.g. `help scrape` or `help scrape subreddit`.
-
-- exit / quit
+- `exit`
 	- Exit the interactive prompt.
 
 ## Examples
