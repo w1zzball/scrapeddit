@@ -97,15 +97,12 @@ def test_scrape_comment(
     mock_console,
 ):
 
-    # arrange
     mock_get_comment.return_value = {"id": "def"}
     mock_format_comment.return_value = {"id": "def", "formatted": True}
     mock_insert_comment.return_value = ("def",)
 
-    # act
     mod.scrape_comment(comment_id="def")
 
-    # assert
     mock_get_comment.assert_called_once_with("def")
     mock_format_comment.assert_called_once_with({"id": "def"})
     mock_insert_comment.assert_called_once_with(
@@ -245,19 +242,3 @@ def test_scrape_redditors_exception(mock_console, mock_scrape_redditor):
     mock_console.print.assert_called_with(
         "[red]Error scraping u/user2: fail[/red]"
     )
-
-
-# @patch("scrapeddit.utils.scraping_utils.console")
-# @patch("scrapeddit.utils.scraping_utils.scrape_redditor")
-# def test_expand_redditors_comments(mock_scrape_redditor, mock_console):
-#     mock_conn = MagicMock()
-#     mock_cursor = MagicMock()
-
-#     mock_cursor.execute = MagicMock()
-#     mock_cursor.fetchall.return_value = [("user1",), ("user2",), ("user3",)]
-
-#     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-#     mock_conn.cursor.return_value.__exit__.return_value = False
-
-#     mod.expand_redditors_comments(threshold=10, limit=5)
-#     mock_cursor.execute.assert_called_once()
