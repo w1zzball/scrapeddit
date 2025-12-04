@@ -120,5 +120,5 @@ with st.expander("Testing"):
         unsafe_allow_html=True,
     )
 
-# with st.container():
-st.page_link("pages/1_🔧Design.py", label="Design", width="stretch")
+with st.container(border=True):
+    st.page_link("pages/1_🔧Design.py", label="Design", width="stretch")
