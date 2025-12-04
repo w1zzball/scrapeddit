@@ -1,22 +1,27 @@
 import pytest
 from unittest.mock import MagicMock, patch
 import scrapeddit.utils.scraping_utils as mod
+import importlib
 
 
 # patch decorator
 @pytest.fixture(autouse=True)
-def mock_with_resources():
-    # no-op decorator
+def mock_with_resources(monkeypatch):
     def fake_with_resources(*a, **kw):
         def decorator(func):
             return func
 
         return decorator
 
-    with pytest.MonkeyPatch.context() as mp:
+    monkeypatch.setattr(
+        "scrapeddit.utils.connection_utils.with_resources", fake_with_resources
+    )
 
-        mp.setattr(mod, "with_resources", fake_with_resources)
-        yield
+    import scrapeddit.utils.scraping_utils as mod
+
+    importlib.reload(mod)
+
+    return mod  # return patched module
 
 
 # functions must be patched from where they are used,
@@ -128,32 +133,40 @@ def test_scrape_comment_no_change(
     )
 
 
-# @patch("scrapeddit.utils.scraping_utils.console")
-# @patch("scrapeddit.utils.scraping_utils.insert_comment")
-# @patch("scrapeddit.utils.scraping_utils.format_comment")
-# @patch("scrapeddit.utils.scraping_utils.get_comments_in_thread")
-# def test_scrape_comments_in_thread_success(
-#     mock_get_comments_in_thread,
-#     mock_format_comment,
-#     mock_insert_comment,
-#     mock_console,
-# ):
-#     mock_get_comments_in_thread.return_value = {"id": "def"}
-#     mock_format_comment.return_value = {"id": "def", "formatted": True}
-#     mock_insert_comment.return_value = ("def",)
+@patch("scrapeddit.utils.scraping_utils.console")
+@patch("scrapeddit.utils.scraping_utils.insert_comment")
+@patch("scrapeddit.utils.scraping_utils.format_comment")
+@patch("scrapeddit.utils.scraping_utils.get_comments_in_thread")
+def test_scrape_comments_in_thread_success(
+    mock_get_comments_in_thread,
+    mock_format_comment,
+    mock_insert_comment,
+    mock_console,
+    mock_with_resources,
+):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+    mock_cur.execute = MagicMock()
+    mod = mock_with_resources
+    mock_get_comments_in_thread.return_value = {"id": "def"}
+    mock_format_comment.return_value = {
+        "name": "x",
+        "author": "y",
+        "body": "z",
+        "created_utc": 1234567890,
+        "edited": False,
+        "ups": 10,
+        "parent_id": "t1_abc",
+        "submission_id": "ghi",
+        "subreddit": "testsub",
+    }
+    mock_insert_comment.return_value = ("def",)
 
-#     mod.scrape_comments_in_thread(thread_id="ghi", limit=5)
+    mod.scrape_comments_in_thread(mock_conn, post_id="ghi", limit=5)
 
-#     mock_get_comments_in_thread.assert_called_once_with(
-#         "def", thread_id="ghi", limit=5
-#     )
-#     mock_format_comment.assert_called_once_with({"id": "def"})
-#     mock_insert_comment.assert_called_once_with(
-#         {"id": "def", "formatted": True}
-#     )
-#     mock_console.print.assert_called_once_with(
-#         "Inserted/updated 1 comments from thread ghi"
-#     )
+    mock_get_comments_in_thread.assert_called_once()
+    mock_format_comment.assert_called_once()
 
 
 @patch("scrapeddit.utils.scraping_utils.scrape_submission")
@@ -162,7 +175,8 @@ def test_scrape_entire_thread(
     mock_scrape_comments_in_thread,
     mock_scrape_submission,
 ):
-    mod.scrape_entire_thread(thread_id="xyz", comment_limit=10)
+    mock_conn = MagicMock()
+    mod.scrape_entire_thread(mock_conn, thread_id="xyz", comment_limit=10)
 
     mock_scrape_submission.assert_called_once()
     mock_scrape_comments_in_thread.assert_called_once()
