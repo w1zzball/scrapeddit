@@ -106,3 +106,16 @@ with st.expander("Inception"):
         reddit API, **PRAW** which presents reddit data as objects.
         """
     )
+
+with st.expander("Testing"):
+    st.markdown(
+        """
+    ##### Testing done via pytest / pytest-cov, with-
+    <div style="display:flex;flex-direction:column; gap:10px; flex-wrap:nowrap; justify-content:center; align-items:center; margin:12px 0;">
+    <span class="orange-button ">55 Tests</span>
+    <span class="orange-button ">Each ETL citical module having 100% coverage  (Original posts of a thread)</span>
+    <span class="orange-button ">Over 70% total coverage</span>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
