@@ -3,7 +3,36 @@ import streamlit as st
 st.markdown(
     '<h1 style="color:#FF4500"><b>Scrapeddit</b></h1>', unsafe_allow_html=True
 )
+with st.container(horizontal_alignment="center", horizontal=True):
+    st.markdown(
+        """
+        <style>
+        .orange-button {
+            background-color: #FF4500;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            text-align: center;
+            border-radius: 10px;
+            }
+        .subheader {
+            margin: 0 auto;
+            font-size: 20px;
+            font-weight: bold;
+            }
+        .centred {
+            text-align: center;
+            display: block;
+        }
+        .tight-to-content {
+            width: fit-content;
+        }
 
+        </style>
+
+    """,
+        unsafe_allow_html=True,
+    )
 with st.sidebar.container():
     with st.expander("how to read"):
         st.success("Highlights in Green")
@@ -12,15 +41,20 @@ with st.sidebar.container():
 
 st.header("About Scrapeddit")
 st.markdown(
-    """An ETL suite for reddit scraping. Proving a range of tools to
-gather data in bulk. Supports scraping-
-- Single Comments
-- Single Submissions (Original posts of a thread)
-- Entire Threads
-- Entire Subreddits
-- Redditors comment history
-- and more...
-"""
+    """##### An ETL suite for reddit scraping. Proving a range of tools to gather data in bulk. Supports scraping-"""
+)
+st.markdown(
+    """
+<div style="display:flex;flex-direction:column; gap:10px; flex-wrap:nowrap; justify-content:center; align-items:center; margin:12px 0;">
+<span class="orange-button tight-to-content">Single Comments</span>
+<span class="orange-button tight-to-content">Single Submissions  (Original posts of a thread)</span>
+<span class="orange-button tight-to-content">Entire Threads</span>
+<span class="orange-button tight-to-content">Entire Subreddits</span>
+<span class="orange-button tight-to-content">Redditors comment history</span>
+<span class="orange-button tight-to-content">and more...</span>
+</div>
+""",
+    unsafe_allow_html=True,
 )
 
 with st.expander("What is Reddit"):
@@ -31,23 +65,22 @@ with st.expander("What is Reddit"):
     )
     st.markdown(
         """
-        Reddit is broken down into communities, subforums called *subreddits* which are user created
+        Reddit is broken down into communities, subforums called *subreddits*, which are user created
         and moderated spaces for discussion on a particular topic. E.g. r/AWS, r/plants, r/movies etc.
 
-         Because of Reddits huge userbase (443.8 million weekly active users)
+         Because of Reddit's huge userbase (443.8 million weekly active users)
          It provides a wealth of data for analysis and there already exist 
          well developed API tools to assist with data extraction.
          """
     )
-    st.markdown("### Types of data available")
     st.markdown(
         """
-            - text : body of a comment
-            - image data : image included with submission
-            - votes : sum of up/downvotes
-            - date : date of creation / edit
-        """
+    <span class="orange-button subheader centred">Types of Data</span> 
+    """,
+        unsafe_allow_html=True,
     )
+    st.image("presentation/assets/orang.png")
+
     st.warning(
         """
     reddit allows for content and communities to be flagged as 18+, requiring verification/explicit approval
