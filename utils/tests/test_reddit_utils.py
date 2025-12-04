@@ -482,3 +482,45 @@ def test_get_redditors_from_subreddit_no_submissions():
 
         mock_reddit.subreddit.assert_called_once_with("testsubreddit")
         assert redditors == []
+
+
+def test_get_redditors_from_subreddit_no_subreddit_exception_logged():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.subreddit.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        redditors = mod.get_redditors_from_subreddit(
+            subreddit_name="invalidsubreddit", limit=2, sort="new"
+        )
+
+        mock_reddit.subreddit.assert_called_once_with("invalidsubreddit")
+        mock_logger.error.assert_called_once()
+        assert redditors == []
+
+
+def test_get_redditors_from_subreddit_fetch_exception_logged():
+    mock_subreddit = MagicMock()
+    mock_subreddit.new.side_effect = Exception("Test exception")
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+
+        mock_reddit = MagicMock()
+        mock_reddit.subreddit.return_value = mock_subreddit
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        redditors = mod.get_redditors_from_subreddit(
+            subreddit_name="testsubreddit", limit=2, sort="new"
+        )
+
+        mock_reddit.subreddit.assert_called_once_with("testsubreddit")
+        mock_logger.error.assert_called_once()
+        assert redditors == []
