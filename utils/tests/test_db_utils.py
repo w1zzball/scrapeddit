@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import importlib
 
 
@@ -44,43 +44,35 @@ def test_db_execute(mock_with_resources):
     mock_cursor.execute.assert_called_once_with(sql)
 
 
-def test_db_execute_prints_rows_affected(mock_with_resources, capsys):
+@patch("scrapeddit.utils.db_utils.console")
+def test_db_execute_prints_rows_affected(mock_console, mock_with_resources):
     mod = mock_with_resources
 
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
 
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-    mock_conn.cursor.return_value.__exit__.return_value = False
-
     mock_cursor.description = None
     mock_cursor.rowcount = 3
-    mock_cursor.execute = MagicMock()
 
     mod.db_execute(mock_conn, "UPDATE x")
 
-    # check print statement
-    out = capsys.readouterr().out
-    assert "Query OK, 3 rows affected." in out
+    mock_console.print.assert_called_once_with("Query OK, 3 rows affected.")
 
 
-def test_db_execute_exception(mock_with_resources, capsys):
+@patch("scrapeddit.utils.db_utils.console")
+def test_db_execute_exception(mock_console, mock_with_resources):
     mod = mock_with_resources
 
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
 
-    # context manager
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-    mock_conn.cursor.return_value.__exit__.return_value = False
-
-    # force error inside execute
     mock_cursor.execute.side_effect = ValueError("bad sql")
 
     mod.db_execute(mock_conn, "SELECT bad")
 
-    out = capsys.readouterr().out
-    assert "ValueError: bad sql" in out
+    mock_console.print.assert_called_once_with("builtins.ValueError: bad sql")
 
 
 def test_clear_all_tables(mock_with_resources):
