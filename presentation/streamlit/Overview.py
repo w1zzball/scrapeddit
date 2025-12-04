@@ -25,8 +25,15 @@ gather data in bulk. Supports scraping-
 
 with st.expander("What is Reddit"):
     st.markdown(
-        """[Reddit](https://www.reddit.com) is a social media site / forum where users can submit text,
+        """[Reddit](https://www.reddit.com) is a social media site / forum hub where users can submit text,
          videos, photos and links which other users can comment and vote on.
+    """
+    )
+    st.markdown(
+        """
+        Reddit is broken down into communities, subforums called *subreddits* which are user created
+        and moderated spaces for discussion on a particular topic. E.g. r/AWS, r/plants, r/movies etc.
+
          Because of Reddits huge userbase (443.8 million weekly active users)
          It provides a wealth of data for analysis and there already exist 
          well developed API tools to assist with data extraction.
