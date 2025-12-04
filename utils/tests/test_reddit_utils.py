@@ -133,6 +133,23 @@ def test_get_comment():
         assert result is mock_comment
 
 
+def test_get_comment_exception_logged():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.comment.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        result = mod.get_comment(comment_id="invalid_comment_id")
+
+        mock_reddit.comment.assert_called_once_with("invalid_comment_id")
+        mock_logger.error.assert_called_once()
+        assert result is None
+
+
 def test_format_comment():
     mock_comment = MagicMock()
     mock_comment.name = "t1_ghijkl"
