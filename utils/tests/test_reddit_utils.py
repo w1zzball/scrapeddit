@@ -345,6 +345,28 @@ def test_get_redditor_comments_top():
         assert comments == [mock_comment1, mock_comment2]
 
 
+def test_get_redditor_comments_top_exception_logged():
+    mock_redditor = MagicMock()
+    mock_redditor.comments.top.side_effect = Exception("Test exception")
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(
+            user_id="test_user", limit=2, sort="top"
+        )
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
+        mock_logger.error.assert_called_once()
+        assert comments == []
+
+
 def test_get_redditor_comments_new():
     mock_redditor = MagicMock()
     mock_comment1 = MagicMock()
@@ -370,6 +392,28 @@ def test_get_redditor_comments_new():
 
         mock_reddit.redditor.assert_called_once_with("test_user")
         assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments_new_exception_logged():
+    mock_redditor = MagicMock()
+    mock_redditor.comments.new.side_effect = Exception("Test exception")
+
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.return_value = mock_redditor
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(
+            user_id="test_user", limit=2, sort="new"
+        )
+
+        mock_reddit.redditor.assert_called_once_with("test_user")
+        mock_logger.error.assert_called_once()
+        assert comments == []
 
 
 def test_get_redditor_comments_invalid_sort():
