@@ -45,12 +45,12 @@ st.markdown(
 )
 st.markdown(
     """
-<div style="display:flex;flex-direction:column; gap:10px; flex-wrap:nowrap; justify-content:center; align-items:center; margin:12px 0;">
+<div style="display:flex;flex-direction:row; gap:10px; flex-wrap:nowrap; justify-content:center; align-items:center; margin:12px 0;">
 <span class="orange-button tight-to-content">Single Comments</span>
 <span class="orange-button tight-to-content">Single Submissions  (Original posts of a thread)</span>
 <span class="orange-button tight-to-content">Entire Threads</span>
 <span class="orange-button tight-to-content">Entire Subreddits</span>
-<span class="orange-button tight-to-content">Redditors comment history</span>
+<span class="orange-button tight-to-content">Redditors comments</span>
 <span class="orange-button tight-to-content">and more...</span>
 </div>
 """,
