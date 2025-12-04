@@ -220,6 +220,37 @@ def test_get_comments_in_thread_by_post_id():
         assert comments == [mock_comment1, mock_comment2]
 
 
+def test_get_comments_in_thread_no_submission():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess:
+        mock_reddit = MagicMock()
+        mock_reddit.submission.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_comments_in_thread(post_id="invalid_id")
+
+        mock_reddit.submission.assert_called_once_with(id="invalid_id")
+        assert comments == []
+
+
+def test_get_comments_in_thread_exception_logged():
+    with patch("scrapeddit.utils.reddit_utils.logger") as mock_logger, patch(
+        "scrapeddit.utils.reddit_utils.get_submission"
+    ) as mock_get_submission:
+        mock_submission = MagicMock()
+        mock_comments = MagicMock()
+        mock_submission.comments = mock_comments
+        mock_comments.replace_more.side_effect = Exception("Test exception")
+        mock_get_submission.return_value = mock_submission
+
+        result = mod.get_comments_in_thread(post_id="invalid_id")
+
+        mock_comments.replace_more.assert_called_once()
+        mock_logger.error.assert_called_once()
+        assert result == []
+
+
 def test_get_comments_in_thread_by_post_url():
     mock_submission = MagicMock()
     mock_comment1 = MagicMock()
@@ -268,6 +299,23 @@ def test_get_redditor_comments():
 
         mock_reddit.redditor.assert_called_once_with("test_user")
         assert comments == [mock_comment1, mock_comment2]
+
+
+def test_get_redditor_comments_exception_logged():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.redditor.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        comments = mod.get_redditors_comments(user_id="invalid_user", limit=2)
+
+        mock_reddit.redditor.assert_called_once_with("invalid_user")
+        mock_logger.error.assert_called_once()
+        assert comments == []
 
 
 def test_get_redditor_comments_top():
@@ -340,9 +388,6 @@ def test_get_redditor_comments_invalid_sort():
             )
 
         mock_reddit.redditor.assert_called_once_with("test_user")
-
-
-from unittest.mock import patch, MagicMock
 
 
 def test_get_redditors_from_subreddit():
