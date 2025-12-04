@@ -90,10 +90,8 @@ def get_comments_in_thread(
     threshold=0,
 ) -> list[Any]:
     """Get all comments in a thread, returns a CommentForest object."""
-    try:
-        submission = get_submission(post_id, post_url)
-    except Exception as e:
-        logger.error("Error fetching submission: %s", e)
+    submission = get_submission(post_id, post_url)
+    if submission is None:
         return []
     comments = submission.comments
     # with console.status("Fetching comments...", spinner="dots"):
