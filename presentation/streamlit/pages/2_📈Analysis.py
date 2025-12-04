@@ -433,9 +433,19 @@ with programming:
         zoom_factor=zoom_level,
     )
 
+with st.container(horizontal=True):
+    with st.container(border=True):
+        st.page_link("pages/1_🔧Design.py", label="Design", width="stretch")
+    with st.container(border=True):
+        st.page_link(
+            "pages/3_➡️Takeaways.py", label="Takeaways", width="stretch"
+        )
+
 
 st.markdown(
     """
+    ---
+
     <footer id="footer">
     <small>[1]
     Vincent D Blondel, Jean-Loup Guillaume, Renaud Lambiotte, Etienne Lefebvre, Fast unfolding of communities in large networks, in Journal of Statistical Mechanics: Theory and Experiment 2008 (10), P1000

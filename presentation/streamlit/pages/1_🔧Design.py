@@ -247,3 +247,7 @@ st.markdown(
 
 """
 )
+
+with st.container(horizontal=True):
+    st.page_link("Overview.py", label="Overview", width="stretch")
+    st.page_link("pages/2_📈Analysis.py", label="Analysis", width="stretch")
