@@ -102,7 +102,10 @@ def prompt_loop():
             s = prompt_data["scrape"]["error"]["desc"]
             for scrape_func in prompt_data["scrape"].values():
                 if target in scrape_func.get("targets", ()):
-                    s = scrape_func["desc"]
+                    s = (
+                        scrape_func["desc"]
+                        + "\n--exit-after flag to quit after scrape completes.\n"
+                    )
 
             return HTML(s)
 
