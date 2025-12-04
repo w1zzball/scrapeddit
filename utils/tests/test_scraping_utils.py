@@ -1,6 +1,22 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import scrapeddit.utils.scraping_utils as mod
+
+
+# patch decorator
+@pytest.fixture(autouse=True)
+def mock_with_resources():
+    # no-op decorator
+    def fake_with_resources(*a, **kw):
+        def decorator(func):
+            return func
+
+        return decorator
+
+    with pytest.MonkeyPatch.context() as mp:
+
+        mp.setattr(mod, "with_resources", fake_with_resources)
+        yield
 
 
 # functions must be patched from where they are used,
@@ -196,3 +212,38 @@ def test_scrape_redditor_get_comment_exception(
     mock_console.print.assert_called_once_with(
         "[red]Error scraping u/test_user: fail[/red]"
     )
+
+
+@patch("scrapeddit.utils.scraping_utils.scrape_redditor")
+def test_scrape_redditors_success(mock_scrape_redditor):
+    redditor_list = ["user1", "user2", "user3"]
+    mod.scrape_redditors(redditor_list)
+    assert mock_scrape_redditor.call_count == 3
+
+
+@patch("scrapeddit.utils.scraping_utils.scrape_redditor")
+@patch("scrapeddit.utils.scraping_utils.console")
+def test_scrape_redditors_exception(mock_console, mock_scrape_redditor):
+    mock_scrape_redditor.side_effect = Exception("fail")
+    redditor_list = ["user1", "user2"]
+    mod.scrape_redditors(redditor_list)
+    assert mock_scrape_redditor.call_count == 2
+    mock_console.print.assert_called_with(
+        "[red]Error scraping u/user2: fail[/red]"
+    )
+
+
+# @patch("scrapeddit.utils.scraping_utils.console")
+# @patch("scrapeddit.utils.scraping_utils.scrape_redditor")
+# def test_expand_redditors_comments(mock_scrape_redditor, mock_console):
+#     mock_conn = MagicMock()
+#     mock_cursor = MagicMock()
+
+#     mock_cursor.execute = MagicMock()
+#     mock_cursor.fetchall.return_value = [("user1",), ("user2",), ("user3",)]
+
+#     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+#     mock_conn.cursor.return_value.__exit__.return_value = False
+
+#     mod.expand_redditors_comments(threshold=10, limit=5)
+#     mock_cursor.execute.assert_called_once()
