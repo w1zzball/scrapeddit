@@ -104,7 +104,8 @@ def prompt_loop():
                 if target in scrape_func.get("targets", ()):
                     s = (
                         scrape_func["desc"]
-                        + "\n--exit-after flag to quit after scrape completes.\n"
+                        + "\n--exit-after flag to quit"
+                        + " after scrape completes.\n"
                     )
 
             return HTML(s)
