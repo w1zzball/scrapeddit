@@ -79,6 +79,40 @@ def test_get_submission_by_url():
         assert result is mock_submission
 
 
+def test_get_submission_by_id_exception_logged():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.submission.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        result = mod.get_submission(post_id="invalid_id")
+
+        mock_reddit.submission.assert_called_once_with(id="invalid_id")
+        mock_logger.error.assert_called_once()
+        assert result is None
+
+
+def test_get_submission_by_url_exception_logged():
+    with patch(
+        "scrapeddit.utils.connection_utils.reddit_session"
+    ) as mock_sess, patch(
+        "scrapeddit.utils.reddit_utils.logger"
+    ) as mock_logger:
+        mock_reddit = MagicMock()
+        mock_reddit.submission.side_effect = Exception("Test exception")
+        mock_sess.return_value.__enter__.return_value = mock_reddit
+
+        result = mod.get_submission(post_url="invalid_url")
+
+        mock_reddit.submission.assert_called_once_with(url="invalid_url")
+        mock_logger.error.assert_called_once()
+        assert result is None
+
+
 def test_get_submission_no_params():
     with pytest.raises(ValueError):
         mod.get_submission()
