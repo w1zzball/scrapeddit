@@ -334,7 +334,7 @@ with general:
 with anime:
     st.markdown(
         """
-    This community is dominated by subreddits about anime, memes and youth culture.
+    This community is shared by subreddits about anime, memes and youth culture.
     The lower left portion being mostly internet/meme culture. This community also has large
     overlap with gaming.
     """
@@ -347,7 +347,7 @@ with anime:
 with gaming:
     st.markdown(
         """
-    This community is dominated by gaming subreddits. The lack of outliers indicates
+    This community consists almost entirely of gaming subreddits. The lack of outliers indicates
     that the degree of relation between gaming subreddits is very high.
     
     """
