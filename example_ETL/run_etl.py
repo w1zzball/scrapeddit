@@ -9,11 +9,11 @@ import logging
 # resolves importation path issues
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from utils.reddit_utils import (  # noqa: E402
+from utils.reddit_utils import (
     get_redditors_comments,
     format_comment,
 )
-from utils.db_utils import batch_insert_comments  # noqa: E402
+from utils.db_utils import batch_insert_comments
 
 
 def main():
